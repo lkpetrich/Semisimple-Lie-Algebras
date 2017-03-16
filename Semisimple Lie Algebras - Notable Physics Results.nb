@@ -1,0 +1,4676 @@
+(* Content-type: application/mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 7.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       145,          7]
+NotebookDataLength[    156891,       4668]
+NotebookOptionsPosition[    145981,       4367]
+NotebookOutlinePosition[    146362,       4384]
+CellTagsIndexPosition[    146319,       4381]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Introduction", "Section"],
+
+Cell["\<\
+This notebook applies my notebook \"Semisimple Lie Algebras.nb\" to various \
+symmetry groups important in physics. The ones I'll cover here are space-time \
+geometry, particle symmetries, and some extras.
+
+
+The space-time ones are 3D, 4D, 8D, 9D, 10D, and 11D. Though all results will \
+be calculated for Euclidean space (metric one-sign definite), they can carry \
+over into Minkowskian space (one sign flipped) by analytic continuation.
+
+The 3D one is associated with quantum-mechanical angular momentum, and the 4D \
+one with familiar space-time.
+
+The 8D and 9D ones are 10D and 11D ones without the light cone, the time \
+dimension and one space dimension, meaning that they are for the transverse \
+degrees of freedom for massless particles. Their counterpart in 4D is 2D, \
+with symmetry group SO(2) / U(1): helicity.
+
+The 10D one is for string theory. There are five types of supersymmetric \
+strings (superstrings), and they are quantum-mechanically consistent only in \
+10D spacetime, and some of them offer plausible Grand Unified Theories.
+
+The 11D one is for M-theory: a poorly-understood theory that unites all the \
+five 10D superstrings in one theory that lives in 11D spacetime.
+
+
+Turning to  particle symmetries, I consider gauge and flavor ones.
+
+The simplest particle symmetry is U(1), associated with adding a complex \
+phase with a particle without mixing it with other kinds of particles. \
+Electromagnetism is a U(1) gauge symmetry, and flavor conservation laws, like \
+of baryon and lepton number, have U(1) symmetries associated with them.
+
+The next sort is SU(2), which acts like 3D angular momentum, thus \"isospin\" \
+from \"isotopic spin\". The unbroken Standard Model has a SU(2) symmetry \
+called \"weak isospin\", for up-like quarks vs. down-like ones and neutrinos \
+vs. electron-like leptons. Plain isospin is an approximate flavor symmetry \
+between up and down quarks, which are much less massive than hadrons. It is \
+respected by the strong / QCD interaction, but not by the electromagnetic or \
+weak interactions.
+
+The next one is SU(3), the QCD (quantum chromodynamics) gauge symmetry, and \
+an approximate flavor symmetry for the three lightest quarks: up, down, and \
+strange. The flavor one is somewhat broken by the strange quark's mass, so I \
+illustrate its breaking into SU(2) * U(1) -- isospin and hypercharge (average \
+electric charge of an isospin multiplet).
+
+This is followed by some GUT ones: Georgi-Glashow SU(5), Pati-Salam SU(4) * \
+SU(2) * SU(2) or SO(6) * SO(4), and SO(10), SU(3)^3, E(6), and E(8) models. \
+The latter one is part of the E(8) * E(8) gauge symmetry in the HE heterotic \
+superstring, one of the five kinds.
+
+
+The mathemtical curiosities include G(2) being a subgroup of SO(7) and SO(8), \
+mentioned by John Baez in \"The Octonions\". I also include some graphs of \
+locations of roots for SU(3), SO(5), and G(2), which are all two-dimensional.
+
+
+The function ShowIrrepListProperties outputs a list of these values for each \
+irrep
+* Its highest weight (how it is specified)
+* Its dimension or degeneracy
+* Reality: 0 = real, 1 = pseudoreal, -1 = complex
+* Moduli for the conserved quantities / congruence values
+* Those conserved quantities / congruence values
+
+Reality:
+* 0 = real: Self-conjugate; Lie-algebra matrices can be turned into real ones
+* 1 = pseudoreal: Self-conjugate; those matrices cannot
+* -1 = complex: Not self-conjugate; those matrices cannot
+
+DecomposeRepProduct makes a list of the irreps it found
+* Total degeneracy or multiplicity
+* Highest weight
+
+DoBranching makes a list of the subgroup irrep sets and U(1) factors it found
+* Total degeneracy or multiplicity
+* List of highest weights of the subgroups
+* List of U(1) factors (empty if none)\
+\>", "Text"],
+
+Cell[CellGroupData[{
+
+Cell["Setup", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"For", " ", "displaying", " ", "properties", " ", "of", " ", 
+    RowBox[{"irreps", ".", "\[IndentingNewLine]", "Highest"}]}], "-", 
+   RowBox[{
+   "weight", " ", "vector", "\[IndentingNewLine]", "Total", " ", "degeneracy",
+     " ", 
+    RowBox[{"(", 
+     RowBox[{"multiplet", " ", "size"}], ")"}], "\[IndentingNewLine]", 
+    RowBox[{"Properties", ":", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"Whether", " ", "self"}], "-", 
+      RowBox[{"conjugate", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"yes", ":", " ", "1"}], ",", " ", 
+         RowBox[{"no", ":", " ", "0"}]}], ")"}], "\[IndentingNewLine]", 
+       "Moduli", " ", "for", " ", "congruency"}], "-", 
+      RowBox[{
+      "class", " ", "quantities", "\[IndentingNewLine]", "Congruency"}], "-", 
+      
+      RowBox[{"class", " ", "quantities", " ", 
+       RowBox[{"(", 
+        RowBox[{"parity", ",", " ", "triality", ",", " ", 
+         RowBox[{"etc", "."}]}], ")"}]}]}]}]}]}], "\[IndentingNewLine]", 
+  "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrreps", "[", 
+   RowBox[{"type_", ",", "maxwtlist_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Table", "[", 
+   RowBox[{
+    RowBox[{"GetRep", "[", 
+     RowBox[{"type", ",", 
+      RowBox[{"maxwtlist", "[", 
+       RowBox[{"[", "k", "]"}], "]"}]}], "]"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"k", ",", 
+      RowBox[{"Length", "[", "maxwtlist", "]"}]}], "}"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepProperties", "[", 
+   RowBox[{"type_", ",", "maxwts_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Join", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"maxwts", ",", 
+      RowBox[{"TotalDegen", "[", 
+       RowBox[{"type", ",", "maxwts"}], "]"}]}], "}"}], ",", 
+    RowBox[{"RepProperties", "[", 
+     RowBox[{"type", ",", "maxwts"}], "]"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"type_", ",", "maxwtlist_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"ShowIrrepProperties", "[", 
+     RowBox[{"type", ",", "#"}], "]"}], "&"}], " ", "/@", " ", 
+   "maxwtlist"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"DecomposeRepSquareLabeled", "[", 
+   RowBox[{"type_", ",", "maxwts_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"\"\<Symmetric\>\"", ",", 
+      RowBox[{"#", "[", 
+       RowBox[{"[", "1", "]"}], "]"}], ",", "\"\<Antisymmetric\>\"", ",", 
+      RowBox[{"#", "[", 
+       RowBox[{"[", "2", "]"}], "]"}]}], "}"}], "&"}], " ", "@", " ", 
+   RowBox[{"DecomposeRepPower", "[", 
+    RowBox[{"type", ",", "maxwts", ",", "2"}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"DecomposeRepCubeLabeled", "[", 
+   RowBox[{"type_", ",", "maxwts_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"\"\<Symmetric\>\"", ",", 
+      RowBox[{"#", "[", 
+       RowBox[{"[", "1", "]"}], "]"}], ",", "\"\<Mixed (2*)\>\"", ",", 
+      RowBox[{"#", "[", 
+       RowBox[{"[", "2", "]"}], "]"}], ",", "\"\<Antisymmetric\>\"", ",", 
+      RowBox[{"#", "[", 
+       RowBox[{"[", "3", "]"}], "]"}]}], "}"}], "&"}], " ", "@", " ", 
+   RowBox[{"DecomposeRepPower", "[", 
+    RowBox[{"type", ",", "maxwts", ",", "3"}], "]"}]}]}]], "Input"]
+}, Closed]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Space-Time Geometry", "Section"],
+
+Cell[CellGroupData[{
+
+Cell["3-Space Angular Momentum: SO(3) ~ SU(2)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "This", " ", "ia", " ", "the", " ", "most", " ", "elementary", " ", 
+    "nonabelian", " ", "Lie", " ", 
+    RowBox[{"algebra", ":", " ", 
+     RowBox[{"A", 
+      RowBox[{"(", "1", ")"}]}]}]}], " ", "*)"}], 
+  RowBox[{
+   RowBox[{"spc3", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"1", ",", "1"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Angular", " ", "momentum", " ", "j"}], " ", "=", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"highest", " ", "weight"}], ")"}], ".", "\[IndentingNewLine]", 
+       RowBox[{"Here", "'"}]}], "s", " ", "for", " ", "angular", " ", 
+      "momenta", " ", "0"}]}], ",", " ", 
+    RowBox[{"1", "/", "2"}], ",", " ", "1", ",", " ", 
+    RowBox[{"3", "/", "2"}], ",", " ", 
+    RowBox[{
+     RowBox[{"2", " ", "--"}], " ", "scalar"}], ",", " ", "spinor", ",", " ", 
+    
+    RowBox[{"vector", "/", "adjoint"}], ",", " ", 
+    RowBox[{"vector", "-", "spinor"}], ",", " ", 
+    RowBox[{"2", "-", 
+     RowBox[{
+      RowBox[{
+      "tensor", ".", " ", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+       "Lists"}], " ", "are", " ", "of", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"multiplicity", "/", "degeneracy"}], ",", " ", 
+        RowBox[{"root", " ", "vector"}], ",", " ", 
+        RowBox[{"weight", " ", "vector"}]}], ")"}]}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"ShowIrreps", "[", 
+    RowBox[{"spc3", ",", 
+     RowBox[{"Table", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"2", "j"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"j", ",", "0", ",", "2", ",", 
+         RowBox[{"1", "/", "2"}]}], "}"}]}], "]"}]}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"spc3", ",", 
+    RowBox[{"Table", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"2", "j"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"j", ",", "0", ",", "2", ",", 
+        RowBox[{"1", "/", "2"}]}], "}"}]}], "]"}]}], "]"}], "  ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Congruency", " ", 
+    RowBox[{"class", ":", " ", 
+     RowBox[{"spinor", " ", 
+      RowBox[{"parity", " ", "--"}], " ", "0", " ", "mod", " ", "2", " ", 
+      "for", " ", "integer", " ", "j"}]}]}], ",", " ", 
+   RowBox[{
+    RowBox[{"1", " ", "mod", " ", "2", " ", "for", " ", "half"}], "-", 
+    RowBox[{"odd", " ", 
+     RowBox[{"j", "."}]}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "  ", 
+  RowBox[{
+  "Now", " ", "for", " ", "Composition", " ", "of", " ", "angular", " ", 
+   RowBox[{"momenta", "."}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Spins", " ", 
+     RowBox[{"1", "/", "2"}]}], ",", 
+    RowBox[{
+     RowBox[{"1", "/", "2"}], " ", "\[Rule]", " ", 
+     RowBox[{"spins", " ", "1"}]}], ",", " ", "0"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc3", ",", 
+     RowBox[{"{", "1", "}"}], ",", 
+     RowBox[{"{", "1", "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"DecomposeRepSquareLabeled", "[", 
+   RowBox[{"spc3", ",", 
+    RowBox[{"{", "1", "}"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Spins", " ", "1"}], ",", 
+    RowBox[{
+     RowBox[{"1", "/", "2"}], " ", "\[Rule]", " ", 
+     RowBox[{"spins", " ", 
+      RowBox[{"3", "/", "2"}]}]}], ",", " ", 
+    RowBox[{"1", "/", "2"}]}], " ", "*)"}], 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc3", ",", 
+     RowBox[{"{", "2", "}"}], ",", 
+     RowBox[{"{", "1", "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Spins", " ", "1"}], ",", "  ", 
+    RowBox[{"\[Rule]", " ", 
+     RowBox[{"spins", " ", "2"}]}], ",", " ", "1", ",", " ", "0"}], " ", 
+   "*)"}], 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc3", ",", 
+     RowBox[{"{", "2", "}"}], ",", 
+     RowBox[{"{", "2", "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"DecomposeRepSquareLabeled", "[", 
+   RowBox[{"spc3", ",", 
+    RowBox[{"{", "2", "}"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Set", " ", "of", " ", "three", " ", "spins", " ", 
+   RowBox[{"1", "/", "2"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"DecomposeRepProdList", "[", 
+   RowBox[{"spc3", ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", "1", "}"}], ",", 
+      RowBox[{"{", "1", "}"}], ",", 
+      RowBox[{"{", "1", "}"}]}], "}"}]}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"DecomposeRepCubeLabeled", "[", 
+   RowBox[{"spc3", ",", 
+    RowBox[{"{", "1", "}"}]}], "]"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["4-Space-Time Lorentz Group: SO(4) ~ SO(3) * SO(3)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Highest", "-", 
+    RowBox[{"weight", " ", 
+     RowBox[{"vector", ":", " ", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"2", "*", "j1"}], ",", 
+         RowBox[{"2", "*", "j2"}]}], "}"}], " ", "for", " ", "each", " ", 
+       "of", " ", "the", " ", "SO", 
+       RowBox[{"(", "3", ")"}], " ", "factors"}]}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc4", " ", "=", 
+    RowBox[{"{", 
+     RowBox[{"4", ",", "2"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Scalar", ",", " ", 
+    RowBox[{"2", " ", "spinors"}], ",", " ", "vector", ",", " ", 
+    RowBox[{
+     RowBox[{"2", " ", "vector"}], "-", "spinors"}], ",", " ", 
+    RowBox[{"2", " ", "antisymmetric", " ", "tensors", " ", 
+     RowBox[{"(", 
+      RowBox[{"self", "-", 
+       RowBox[{"duality", " ", "decomposition"}]}], ")"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"symmetric", " ", "traceless", " ", "2"}], "-", "tensor"}], ",", 
+    " ", 
+    RowBox[{"and", " ", "2", " ", "Weyl", " ", "tensors", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"self", "-", 
+        RowBox[{"duality", " ", "decomposition"}]}], ")"}], " ", "--"}], " ", 
+     "gives", " ", "total", " ", "degeneracy", " ", "here"}], ",", " ", 
+    RowBox[{"to", " ", "save", " ", "space"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc4irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "1"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "2"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "2"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "2"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"4", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "4"}], "}"}]}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"ShowIrreps", "[", 
+   RowBox[{"spc4", ",", 
+    RowBox[{"Take", "[", 
+     RowBox[{"spc4irreps", ",", "4"}], "]"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"spc4", ",", "spc4irreps"}], "]"}], " ", "//", "  ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Congruency", " ", 
+    RowBox[{"classes", ":", " ", 
+     RowBox[{"sum", " ", "of", " ", "spinor", " ", "parities"}]}]}], ",", " ", 
+   RowBox[{"first", " ", "spinor", " ", "parity"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Vector", " ", "*", " ", "Vector"}], " ", "=", " ", 
+     RowBox[{
+      RowBox[{"symmetric", " ", "traceless", " ", "2"}], "-", "tensor"}]}], 
+    ",", " ", 
+    RowBox[{
+     RowBox[{"antisymmetric", " ", "2"}], "-", "tensor"}], ",", " ", 
+    RowBox[{"and", " ", "scalar"}]}], " ", "*)"}], 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepSquareLabeled", "[", 
+    RowBox[{"spc4", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "1"}], "}"}]}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", " ", "*", " ", 
+     RowBox[{"Spinor", ":", " ", "spinor"}]}], ",", " ", 
+    RowBox[{"vector", "-", "spinor"}]}], " ", "*)"}], 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc4", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Get", " ", "the", " ", "Riemann", " ", 
+   RowBox[{"tensor", ":", " ", 
+    RowBox[{
+     RowBox[{
+     "symmetric", " ", "product", " ", "of", " ", "antisymmetric", " ", "2"}],
+      "-", 
+     RowBox[{
+      RowBox[{"tensors", ".", " ", "It"}], " ", "has", " ", "the", " ", 
+      "Weyl", " ", "tensor", " ", 
+      RowBox[{"(", 
+       RowBox[{"2", " ", "duality", " ", "eigenstates"}], ")"}], " ", "and", 
+      " ", "the", " ", "Ricci", " ", "tensor", " ", 
+      RowBox[{"(", 
+       RowBox[{"symmetric", ":", " ", 
+        RowBox[{
+         RowBox[{"symmetric", " ", "traceless"}], " ", "+", " ", 
+         RowBox[{"Ricci", " ", "scalar"}]}]}], ")"}]}]}]}]}], " ", 
+  "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"AS", " ", "Tensor", " ", "*", " ", "AS", " ", "Tensor"}], ",", 
+    " ", 
+    RowBox[{"same", " ", 
+     RowBox[{"duality", ":", " ", 
+      RowBox[{"Weyl", " ", "tensor"}]}]}], ",", " ", 
+    RowBox[{"AS", " ", "tensor"}], ",", " ", "scalar"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepSquareLabeled", "[", 
+    RowBox[{"spc4", ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "0"}], "}"}]}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"AS", " ", "Tensor", " ", "*", " ", "AS", " ", "Tensor"}], ",", 
+    " ", 
+    RowBox[{"same", " ", "opposite", " ", 
+     RowBox[{"dualities", ":", " ", 
+      RowBox[{"symmetric", " ", "traceless", " ", "tensor"}]}]}]}], " ", 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc4", ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "2"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["10-D Space-Time without the Light Cone: SO(8)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"From", " ", "string", " ", 
+    RowBox[{"theory", ".", " ", "Transverse"}], " ", "degrees", " ", "of", 
+    " ", 
+    RowBox[{"freedom", ":", " ", 
+     RowBox[{"8", "D"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc8", " ", "=", 
+    RowBox[{"{", 
+     RowBox[{"4", ",", "4"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Scalar", ",", " ", "vector", ",", " ", 
+    RowBox[{"2", " ", "spinors"}], ",", " ", "adjoint", ",", " ", 
+    RowBox[{"symmetric", "-", 
+     RowBox[{"traceless", " ", "tensor"}]}], ",", " ", 
+    RowBox[{"vector", "-", 
+     RowBox[{
+      RowBox[{"spinors", ".", " ", "The"}], " ", "spinors", " ", "are", " ", 
+      "both", " ", "self"}], "-", "conjugate"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc8irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "1"}], "}"}]}], "}"}]}], 
+   ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"spc8", ",", "spc8irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Supergravity", " ", "multiplet", "\[IndentingNewLine]", "Bosonic", " ", 
+    "64"}], "\[IndentingNewLine]", "-", " ", 
+   RowBox[{"SymmTrcls", " ", "Tensor", " ", "35"}], "\[IndentingNewLine]", 
+   "-", " ", 
+   RowBox[{"AntiSymm", " ", "Tensor", " ", "28"}], "\[IndentingNewLine]", "-",
+    " ", 
+   RowBox[{
+   "Scalar", " ", "1", "\[IndentingNewLine]", "Fermionic", " ", "64"}], 
+   "\[IndentingNewLine]", "-", " ", 
+   RowBox[{"Spinor", " ", "8"}], "\[IndentingNewLine]", "-", " ", "Vector", 
+   "-", 
+   RowBox[{"Spinor", " ", "56"}]}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "vector", " ", "ecomposes", " ", "into", " ", 
+     "symmetric", " ", "traceless"}], ",", " ", "adjoint", ",", " ", 
+    RowBox[{"and", " ", "scalar"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepSquareLabeled", "[", 
+    RowBox[{"spc8", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}]}], 
+    "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "spinor", " ", "ecomposes", " ", "into", " ", 
+     "vector"}], "-", 
+    RowBox[{"spinor", " ", "and", " ", "spinor"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc8", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Compactification", ":", " ", 
+     RowBox[{
+     "breakdown", " ", "of", " ", "10", "D", " ", "into", " ", "6", "D", " ", 
+      "*", " ", "4", 
+      RowBox[{"D", ".", " ", "The"}], " ", "latter", " ", "has", " ", "the", 
+      " ", "light", " ", "cone"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"making", " ", "it", " ", "effectively", " ", "2", 
+      RowBox[{"D", ".", "\[IndentingNewLine]", "Results"}], " ", "are", " ", 
+      "multiplets", " ", "in", " ", "the", " ", "6", " ", "dimensions"}], " ",
+      "-", " ", 
+     RowBox[{"SO", 
+      RowBox[{"(", "6", ")"}]}], " ", "-", " ", 
+     RowBox[{"and", " ", "the", " ", "helicity", " ", "in", " ", "4", "D"}], 
+     " ", "-", " ", 
+     RowBox[{"U", 
+      RowBox[{"(", "1", ")"}]}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"MakeRootDemoter", "[", 
+    RowBox[{"spc8d62", ",", 
+     RowBox[{"{", 
+      RowBox[{"4", ",", "4"}], "}"}], ",", "1"}], "]"}], ";", " ", 
+   RowBox[{"spc8d62", "[", "\"\<subtypes\>\"", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", " ", "makes", " ", "6", "D", " ", "vector"}], ",", " ", 
+    
+    RowBox[{
+    "and", " ", "6", "D", " ", "scalar", " ", "with", " ", "two", " ", "4", 
+     "D", " ", "helicity", " ", "states"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc8d62", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Spinor", " ", "becomes", " ", "two", " ", "6", "D", " ", "spinors"}], 
+    ",", " ", 
+    RowBox[{
+     RowBox[{"each", " ", "with", " ", "a", " ", "helicity", " ", "of", " ", 
+      RowBox[{"1", "/", "2"}], " ", "or"}], " ", "-", 
+     RowBox[{"1", "/", "2"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc8d62", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Antisymmetric", " ", "tensor", " ", "becomes", " ", "6", "D", " ", 
+     "antisymmetric", " ", "tensor"}], ",", " ", 
+    RowBox[{
+     RowBox[{"6", "D", " ", "vectors", " ", "with", " ", "helicities"}], " ", 
+     "+", 
+     RowBox[{"-", " ", "1"}]}], ",", " ", 
+    RowBox[{
+    "and", " ", "a", " ", "scalar", " ", "with", " ", "zero", " ", 
+     "helicity"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc8d62", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Symmetric", " ", "traceless", " ", "tensor", " ", "becomes", " ", "6", 
+     "D", " ", "symmetric", " ", "traceless", " ", "tensor"}], ",", " ", 
+    RowBox[{
+     RowBox[{"6", "D", " ", "vectors", " ", "with", " ", "helicities"}], " ", 
+     "+", 
+     RowBox[{"-", " ", "1"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"and", " ", "scalars", " ", "with", " ", "helicities"}], " ", 
+     "+", 
+     RowBox[{"-", " ", "2"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc8d62", ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", "-", 
+     RowBox[{"spinors", " ", "branch", " ", "into", " ", "vector"}], "-", 
+     RowBox[{"spinors", " ", "and", " ", "plain", " ", 
+      RowBox[{"spinors", ".", " ", "The"}], " ", "plain"}], "-", 
+     RowBox[{"spinor", " ", "parts", " ", "have", " ", "helicities"}], " ", 
+     "+", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"-", "1"}], "/", "2"}], " ", "and"}], " ", "+", 
+     RowBox[{
+      RowBox[{"-", "3"}], "/", "2"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"the", " ", "vector"}], "-", 
+     RowBox[{"spinor", " ", "parts", " ", "only", " ", "helicities"}], " ", 
+     "+", 
+     RowBox[{
+      RowBox[{"-", "1"}], "/", "2"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc8d62", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["11-D Space-Time without the Light Cone: SO(9)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"From", " ", "M"}], "-", 
+    RowBox[{
+     RowBox[{"theory", ".", " ", "Transverse"}], " ", "degrees", " ", "of", 
+     " ", 
+     RowBox[{"freedom", ":", " ", 
+      RowBox[{"9", "D"}]}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc9", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "4"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Scalar", ",", " ", "vector", ",", " ", "spinor", ",", " ", 
+    RowBox[{"antisymmetric", "/", "adjoint"}], ",", " ", 
+    RowBox[{"symmetric", "-", 
+     RowBox[{"traceless", " ", "tensor"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"antisymmetric", " ", "3"}], "-", "tensor"}], ",", " ", 
+    RowBox[{"vector", "-", 
+     RowBox[{"spinor", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc9irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "1"}], "}"}]}], "}"}]}], 
+   ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"spc9", ",", "spc9irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Supergravity", " ", "multiplet", "\[IndentingNewLine]", "Bosonic", " ", 
+    "128"}], "\[IndentingNewLine]", "-", " ", 
+   RowBox[{"SymmTrcls", " ", "Tensor", " ", "44"}], "\[IndentingNewLine]", 
+   "-", " ", 
+   RowBox[{"AntiSymm", " ", "3"}], "-", 
+   RowBox[{
+   "Tensor", " ", "84", "\[IndentingNewLine]", "Fermionic", " ", "128"}], 
+   "\[IndentingNewLine]", "-", " ", "Vector", "-", 
+   RowBox[{"Spinor", " ", "128"}]}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "vector", " ", "ecomposes", " ", "into", " ", 
+     "symmetric", " ", "traceless"}], ",", " ", 
+    RowBox[{"antisymmetric", "/", "adjoint"}], ",", " ", 
+    RowBox[{"and", " ", "scalar"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepSquareLabeled", "[", 
+    RowBox[{"spc9", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}]}], 
+    "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", " ", "*", " ", 
+     RowBox[{"adjoint", ":", " ", 
+      RowBox[{"includes", " ", "vector"}]}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"antisymmetric", " ", "3"}], "-", "tensor"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc9", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "spinor", " ", "ecomposes", " ", "into", " ", 
+     "vector"}], "-", 
+    RowBox[{"spinor", " ", "and", " ", "spinor"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc9", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Go", " ", "from", " ", "M"}], "-", 
+     RowBox[{"theory", " ", "to", " ", "string", " ", 
+      RowBox[{"theory", ":", " ", 
+       RowBox[{"9", "D"}]}]}]}], " ", "\[Rule]", " ", 
+    RowBox[{
+     RowBox[{"8", "D"}], " ", "+", " ", 
+     RowBox[{"1", "D"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"MakeExtensionSplitter", "[", 
+   RowBox[{"spc9d8", ",", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "4"}], "}"}], ",", "4"}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MakeExtensionSplitter", "[", 
+  RowBox[{"spc9d8", ",", 
+   RowBox[{"{", 
+    RowBox[{"2", ",", "4"}], "}"}], ",", "4"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Vector", " ", "\[Rule]", " ", 
+    RowBox[{"vector", " ", "+", " ", "scalar"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc9d8", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Spinor", " ", "\[Rule]", " ", 
+    RowBox[{"two", " ", "spinors"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc9d8", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Antisymmetric", " ", "tensor"}], " ", "\[Rule]", " ", 
+     RowBox[{"antisymmetric", " ", "tensor"}]}], ",", " ", "vector"}], " ", 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc9d8", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Symmetric", " ", "traceless", " ", "tensor"}], " ", "\[Rule]", 
+     " ", 
+     RowBox[{"symmetric", " ", "traceless", " ", "tensor"}]}], ",", " ", 
+    "vector", ",", " ", "scalar"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc9d8", ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Antisymmetric", " ", "3"}], "-", "tensor"}], " ", "\[Rule]", 
+     " ", 
+     RowBox[{
+      RowBox[{"antisymmetric", " ", "3"}], "-", "tensor"}]}], ",", " ", 
+    RowBox[{"antisymmetric", "/", "adjoint"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc9d8", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Vector", "-", "spinor"}], " ", "\[Rule]", " ", 
+     RowBox[{
+      RowBox[{"2", " ", "vector"}], "-", "spinors"}]}], ",", " ", 
+    RowBox[{"2", " ", "spinors"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc9d8", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["10-D Space-Time: SO(10)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"From", " ", "string", " ", 
+    RowBox[{"theory", "."}]}], "  ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc10", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"4", ",", "5"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Scalar", ",", " ", "vector", ",", " ", 
+    RowBox[{"2", " ", "spinors"}], ",", " ", "adjoint", ",", " ", 
+    RowBox[{"symmetric", "-", 
+     RowBox[{"traceless", " ", "tensor"}]}], ",", " ", 
+    RowBox[{"vector", "-", 
+     RowBox[{
+      RowBox[{"spinors", ".", " ", "The"}], " ", "spinors", " ", "are", " ", 
+      "conjugate", " ", "to", " ", "each", " ", "other"}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc10irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], 
+     "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"spc10", ",", "spc10irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Supergravity", " ", "multiplet", "\[IndentingNewLine]", "Bosonic", " ", 
+    "64"}], "\[IndentingNewLine]", "-", " ", 
+   RowBox[{"SymmTrcls", " ", "Tensor", " ", "35"}], "\[IndentingNewLine]", 
+   "-", " ", 
+   RowBox[{"AntiSymm", " ", "Tensor", " ", "28"}], "\[IndentingNewLine]", "-",
+    " ", 
+   RowBox[{
+   "Scalar", " ", "1", "\[IndentingNewLine]", "Fermionic", " ", "64"}], 
+   "\[IndentingNewLine]", "-", " ", 
+   RowBox[{"Spinor", " ", "8"}], "\[IndentingNewLine]", "-", " ", "Vector", 
+   "-", 
+   RowBox[{"Spinor", " ", "56"}]}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "vector", " ", "ecomposes", " ", "into", " ", 
+     "symmetric", " ", "traceless"}], ",", " ", "adjoint", ",", " ", 
+    RowBox[{"and", " ", "scalar"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepSquareLabeled", "[", 
+    RowBox[{"spc10", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], 
+    "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "spinor", " ", "ecomposes", " ", "into", " ", 
+     "vector"}], "-", 
+    RowBox[{"spinor", " ", "and", " ", "spinor"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc10", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Compactification", ":", " ", 
+    RowBox[{
+    "breakdown", " ", "of", " ", "10", "D", " ", "into", " ", "6", "D", " ", 
+     "*", " ", "4", 
+     RowBox[{"D", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"MakeExtensionSplitter", "[", 
+    RowBox[{"spc10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"4", ",", "5"}], "}"}], ",", "3"}], "]"}], ";", " ", 
+   RowBox[{"spc10d64", "[", "\"\<subtypes\>\"", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", " ", "makes", " ", "6", "D", " ", "vector"}], ",", " ", 
+    
+    RowBox[{
+    "and", " ", "6", "D", " ", "scalar", " ", "with", " ", "4", "D", " ", 
+     "vector"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Spinor", " ", "becomes", " ", "two", " ", "6", "D", " ", "spinors"}], 
+    ",", " ", 
+    RowBox[{
+    "each", " ", "paired", " ", "with", " ", "a", " ", "4", "D", " ", 
+     "spinor"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Antisymmetric", " ", "tensor", " ", "becomes", " ", "6", "D", " ", "and",
+      " ", "4", "D", " ", "antisymmetric", " ", "tensors"}], ",", " ", 
+    RowBox[{"and", " ", "vector", " ", "*", " ", "vector"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Symmetric", " ", "traceless", " ", "tensor", " ", "becomes", " ", "4", 
+     "D", " ", "and", " ", "6", "D", " ", "symmetric", " ", "traceless", " ", 
+     "tensors"}], ",", " ", 
+    RowBox[{"vector", " ", "*", " ", "vector"}], ",", " ", 
+    RowBox[{"and", " ", "scalar"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", "-", 
+     RowBox[{"spinors", " ", "branch", " ", "into", " ", "vector"}], "-", 
+     RowBox[{"spinors", " ", "*", " ", "plain", " ", "spinors"}]}], ",", " ", 
+    
+    RowBox[{
+    "plain", " ", "spinors", " ", "*", " ", "vector", " ", "spinors"}], ",", 
+    " ", 
+    RowBox[{
+    "and", " ", "plain", " ", "spinors", " ", "*", " ", "plain", " ", 
+     "spinors"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["11-D Space-Time: SO(11)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"From", " ", "M"}], "-", 
+    RowBox[{"theory", "."}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc11", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "5"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Scalar", ",", " ", "vector", ",", " ", "spinor", ",", " ", 
+    RowBox[{"antisymmetric", "/", "adjoint"}], ",", " ", 
+    RowBox[{"symmetric", "-", 
+     RowBox[{"traceless", " ", "tensor"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"antisymmetric", " ", "3"}], "-", "tensor"}], ",", " ", 
+    RowBox[{"vector", "-", 
+     RowBox[{"spinor", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"spc11irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"2", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], 
+     "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"spc11", ",", "spc11irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Supergravity", " ", "multiplet", "\[IndentingNewLine]", "Bosonic", " ", 
+    "128"}], "\[IndentingNewLine]", "-", " ", 
+   RowBox[{"SymmTrcls", " ", "Tensor", " ", "44"}], "\[IndentingNewLine]", 
+   "-", " ", 
+   RowBox[{"AntiSymm", " ", "3"}], "-", 
+   RowBox[{
+   "Tensor", " ", "84", "\[IndentingNewLine]", "Fermionic", " ", "128"}], 
+   "\[IndentingNewLine]", "-", " ", "Vector", "-", 
+   RowBox[{"Spinor", " ", "128"}]}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "vector", " ", "ecomposes", " ", "into", " ", 
+     "symmetric", " ", "traceless"}], ",", " ", 
+    RowBox[{"antisymmetric", "/", "adjoint"}], ",", " ", 
+    RowBox[{"and", " ", "scalar"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepSquareLabeled", "[", 
+    RowBox[{"spc11", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], 
+    "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Vector", " ", "*", " ", 
+     RowBox[{"adjoint", ":", " ", 
+      RowBox[{"includes", " ", "vector"}]}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"antisymmetric", " ", "3"}], "-", "tensor"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc11", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Vector", " ", "*", " ", "spinor", " ", "ecomposes", " ", "into", " ", 
+     "vector"}], "-", 
+    RowBox[{"spinor", " ", "and", " ", "spinor"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"spc11", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Go", " ", "from", " ", "M"}], "-", 
+     RowBox[{"theory", " ", "to", " ", "string", " ", 
+      RowBox[{"theory", ":", " ", 
+       RowBox[{"11", "D"}]}]}]}], " ", "\[Rule]", " ", 
+    RowBox[{
+     RowBox[{"10", "D"}], " ", "+", " ", 
+     RowBox[{"1", "D"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"MakeExtensionSplitter", "[", 
+   RowBox[{"spc11d10", ",", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "5"}], "}"}], ",", "5"}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MakeExtensionSplitter", "[", 
+  RowBox[{"spc11d10", ",", 
+   RowBox[{"{", 
+    RowBox[{"2", ",", "5"}], "}"}], ",", "5"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Vector", " ", "\[Rule]", " ", 
+    RowBox[{"vector", " ", "+", " ", "scalar"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc11d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Spinor", " ", "\[Rule]", " ", 
+    RowBox[{"two", " ", "spinors"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc11d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Antisymmetric", " ", "tensor"}], " ", "\[Rule]", " ", 
+     RowBox[{"antisymmetric", " ", "tensor"}]}], ",", " ", "vector"}], " ", 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc11d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Symmetric", " ", "traceless", " ", "tensor"}], " ", "\[Rule]", 
+     " ", 
+     RowBox[{"symmetric", " ", "traceless", " ", "tensor"}]}], ",", " ", 
+    "vector", ",", " ", "scalar"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc11d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"2", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Antisymmetric", " ", "3"}], "-", "tensor"}], " ", "\[Rule]", 
+     " ", 
+     RowBox[{
+      RowBox[{"antisymmetric", " ", "3"}], "-", "tensor"}]}], ",", " ", 
+    RowBox[{"antisymmetric", "/", "adjoint"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc11d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "1", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Vector", "-", "spinor"}], " ", "\[Rule]", " ", 
+     RowBox[{
+      RowBox[{"2", " ", "vector"}], "-", "spinors"}]}], ",", " ", 
+    RowBox[{"2", " ", "spinors"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"spc11d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], 
+   " ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Flavor and Gauge Symmetry", "Section"],
+
+Cell[CellGroupData[{
+
+Cell["QCD Gauge Symmetry and Light-Quark Flavor Symmetry: SU(3)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+   "They", " ", "are", " ", "treated", " ", "together", " ", "here", " ", 
+    "because", " ", "they", " ", "have", " ", "the", " ", "same", " ", 
+    "symmetry", " ", 
+    RowBox[{"group", "."}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gfssu3", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"1", ",", "2"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"The", " ", "\"\<interesting\>\"", " ", "irreps", " ", 
+    RowBox[{"here", ":", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"Quark", " ", 
+       RowBox[{"color", " ", "/", " ", "quark"}], " ", "flavor", " ", 
+       RowBox[{"(", 
+        RowBox[{"up", ",", " ", "down", ",", " ", "strange"}], ")"}], 
+       "\[IndentingNewLine]", "Quark", " ", 
+       RowBox[{"anticolor", " ", "/", " ", "antiflavor"}], 
+       "\[IndentingNewLine]", "Gluon", " ", "color"}], "-", 
+      RowBox[{"anticolor", " ", "/", " ", "3"}], "-", 
+      RowBox[{
+       RowBox[{"(", "anti", ")"}], 
+       RowBox[{"color", " ", "/", " ", "flavor"}]}], "-", 
+      RowBox[{"antiflavor", " ", "/", " ", "3"}], "-", 
+      RowBox[{
+       RowBox[{"(", "anti", ")"}], "flavor", " ", "octet", 
+       "\[IndentingNewLine]", "3"}], "-", 
+      RowBox[{"flavor", " ", "decuplet", "\[IndentingNewLine]", "3"}], "-", 
+      RowBox[{"antiflavor", " ", "decuplet"}]}]}]}], "\[IndentingNewLine]", 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gfssu3irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"3", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "3"}], "}"}]}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"ShowIrreps", "[", 
+   RowBox[{"gfssu3", ",", "gfssu3irreps"}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"gfssu3", ",", "gfssu3irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Mesons", " ", "--"}], " ", "octet", " ", 
+     RowBox[{"(", "flavor", ")"}]}], ",", " ", 
+    RowBox[{"singlet", " ", 
+     RowBox[{"(", 
+      RowBox[{"color", ",", " ", "flavor"}], ")"}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DecomposeRepProduct", "[", 
+    RowBox[{"gfssu3", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Baryons", " ", "--"}], " ", 
+     RowBox[{"flavor", ":", " ", 
+      RowBox[{"decuplet", " ", 
+       RowBox[{"(", 
+        RowBox[{"spin", "-", 
+         RowBox[{"3", "/", "2"}]}], ")"}]}]}]}], ",", " ", 
+    RowBox[{"two", " ", "octets", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"spin", "-", 
+        RowBox[{"1", "/", "2"}]}], ")"}], " ", "/", " ", 
+      RowBox[{"color", ":", " ", "singlet"}]}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepCubeLabeled", "[", 
+    RowBox[{"gfssu3", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Antibaryons", " ", "--"}], " ", 
+     RowBox[{"antiflavor", ":", " ", 
+      RowBox[{"decuplet", " ", 
+       RowBox[{"(", 
+        RowBox[{"spin", "-", 
+         RowBox[{"3", "/", "2"}]}], ")"}]}]}]}], ",", " ", 
+    RowBox[{"two", " ", "octets", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"spin", "-", 
+        RowBox[{"1", "/", "2"}]}], ")"}], " ", "/", " ", 
+      RowBox[{"anticolor", ":", " ", "singlet"}]}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"MatrixForm", " ", "/@", " ", 
+   RowBox[{"DecomposeRepCubeLabeled", "[", 
+    RowBox[{"gfssu3", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1"}], "}"}]}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"spnsu2", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{"1", ",", "1"}], "}"}]}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Decomposition", " ", "of", " ", "spin", " ", "and", " ", "flavor", " ", 
+    RowBox[{"together", ".", " ", "They"}], " ", "are"}], ",", " ", 
+   RowBox[{"in", " ", "order"}], ",", " ", 
+   RowBox[{
+    RowBox[{"symmetric", " ", "mixed", " ", "and", " ", 
+     RowBox[{"antisymmetric", ".", " ", "The"}], " ", "observed", " ", 
+     "baryon", " ", "states", " ", "are", " ", "the", " ", "symmetric", " ", 
+     "ones", " ", "which", " ", "was", " ", "contrary", " ", "to", " ", 
+     "what", " ", "one", " ", "would", " ", "expect", " ", "of", " ", "a", 
+     " ", "spin"}], "-", 
+    RowBox[{
+     RowBox[{"1", "/", "2"}], " ", 
+     RowBox[{"particle", ".", " ", "One"}], " ", "expects", " ", "Fermi"}], 
+    "-", 
+    RowBox[{"Dirac", " ", "statistics"}], " ", "-", " ", "antisymmetry", " ", 
+    "-", " ", 
+    RowBox[{"rather", " ", "than", " ", "Bose"}], "-", 
+    RowBox[{"Einstein", " ", "statistics"}], " ", "-", " ", 
+    RowBox[{"symmetry", "."}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"DecomposeAlgProdRepPower", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"spnsu2", ",", "gfssu3"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", "1", "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0"}], "}"}]}], "}"}], ",", "3"}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Decomposition", " ", "of", " ", "spin"}], ",", " ", "flavor", ",",
+    " ", 
+   RowBox[{
+    RowBox[{"and", " ", "color", " ", "together", " ", "with", " ", "Fermi"}],
+     "-", 
+    RowBox[{"Dirac", " ", "statistics"}], " ", "-", " ", 
+    RowBox[{
+     RowBox[{"antisymmetry", ".", " ", "Note"}], " ", "that", " ", "when", 
+     " ", "the", " ", "last", " ", "part", " ", "is", " ", "antisymmetry", 
+     " ", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0"}], "}"}], " ", "the", " ", "rest", " ", "of", " ",
+      "it", " ", "is", " ", "what", " ", "one", " ", "finds", " ", "in", " ", 
+     "the", " ", "observed", " ", 
+     RowBox[{"baryons", "."}]}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "@", " ", 
+  RowBox[{"DecomposeAlgProdRepPwrSym", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"spnsu2", ",", "gfssu3", ",", "gfssu3"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", "1", "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0"}], "}"}]}], "}"}], ",", "3", ",", 
+    RowBox[{"-", "1"}]}], "]"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["\<\
+Separation of Up/Down from Strange Quarks: SU(3) -> SU(2) * U(1)\
+\>", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Decompose", " ", "three"}], "-", 
+    RowBox[{"quark", " ", "flavor", " ", "SU", 
+     RowBox[{"(", "3", ")"}], " ", "into", " ", "isospin", " ", 
+     RowBox[{"(", 
+      RowBox[{"up", " ", "and", " ", 
+       RowBox[{"down", ":", " ", 
+        RowBox[{"SU", 
+         RowBox[{"(", "2", ")"}]}]}]}], ")"}], " ", "and", " ", "hypercharge",
+      " ", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"up", "/", "down"}], " ", "and", " ", 
+       RowBox[{"strange", ":", " ", 
+        RowBox[{"U", 
+         RowBox[{"(", "1", ")"}]}]}]}], ")"}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"MakeRootDemoter", "[", 
+    RowBox[{"fssu3d2", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "2"}], "}"}], ",", "2"}], "]"}], ";", " ", 
+   RowBox[{"fssu3d2", "[", "\"\<subtypes\>\"", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Quark", "\[IndentingNewLine]", "u"}], ",", 
+    RowBox[{"d", " ", "-", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"1", "/", "2"}], ",", 
+        RowBox[{"1", "/", "6"}]}], ")"}], "\[IndentingNewLine]", "s"}], " ", 
+     "-", " ", 
+     RowBox[{"(", 
+      RowBox[{"0", ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "/", "3"}]}], ")"}]}]}], "\[IndentingNewLine]", 
+   "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"fssu3d2", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Antiquark", "\[IndentingNewLine]", "u", "*"}], ",", 
+    RowBox[{"d", "*", " ", 
+     RowBox[{"-", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"1", "/", "2"}], ",", 
+        RowBox[{
+         RowBox[{"-", "1"}], "/", "6"}]}], ")"}]}], "\[IndentingNewLine]", 
+     "s", "*", " ", 
+     RowBox[{"-", " ", 
+      RowBox[{"(", 
+       RowBox[{"0", ",", 
+        RowBox[{"1", "/", "3"}]}], ")"}]}]}]}], "\[IndentingNewLine]", "*)"}],
+   "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"fssu3d2", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Quark", "-", 
+    RowBox[{"antiquark", " ", "or", " ", "3"}], "-", 
+    RowBox[{
+     RowBox[{"(", "anti", ")"}], "quark", " ", "octet", "\[IndentingNewLine]",
+      "pion"}], " ", "-", " ", "sigma", " ", "-", " ", "antisigma", " ", "-", 
+    " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", ",", "0"}], ")"}], "\[IndentingNewLine]", "kaon"}], " ", 
+    "-", " ", "xi", " ", "-", " ", "antinucleon", " ", "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"1", "/", "2"}], ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "/", "2"}]}], ")"}], "\[IndentingNewLine]", 
+     "kaon"}], " ", "-", " ", "nucleon", " ", "-", " ", "antixi", " ", "-", 
+    " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"1", "/", "2"}], ",", 
+       RowBox[{"1", "/", "2"}]}], ")"}], "\[IndentingNewLine]", "eta"}], " ", 
+    "-", " ", "lambda", " ", "-", " ", "antilambda", " ", "-", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0"}], ")"}]}], "\[IndentingNewLine]", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"fssu3d2", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "1"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Quark", " ", "decuplet", "\[IndentingNewLine]", "delta"}], " ", 
+    "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"3", "/", "2"}], ",", 
+       RowBox[{"1", "/", "2"}]}], ")"}], "\[IndentingNewLine]", "sigma"}], 
+    "-", "x", " ", "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", ",", "0"}], ")"}], "\[IndentingNewLine]", "xi"}], "-", "x",
+     " ", "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"1", "/", "2"}], ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "/", "2"}]}], ")"}], "\[IndentingNewLine]", 
+     "omega"}], " ", "-", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", 
+      RowBox[{"-", "1"}]}], ")"}]}], "\[IndentingNewLine]", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"fssu3d2", ",", 
+     RowBox[{"{", 
+      RowBox[{"3", ",", "0"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "Antiquark", " ", "decuplet", "\[IndentingNewLine]", "antidelta"}], " ", 
+    "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"3", "/", "2"}], ",", 
+       RowBox[{
+        RowBox[{"-", "1"}], "/", "2"}]}], ")"}], "\[IndentingNewLine]", 
+     "antisigma"}], "-", "x", " ", "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", ",", "0"}], ")"}], "\[IndentingNewLine]", "antixi"}], "-", 
+    "x", " ", "-", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"1", "/", "2"}], ",", 
+       RowBox[{"1", "/", "2"}]}], ")"}], "\[IndentingNewLine]", "antiomega"}],
+     " ", "-", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1"}], ")"}]}], "\[IndentingNewLine]", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"fssu3d2", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "3"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Georgi-Glashow: SU(5)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+     "The", " ", "simplest", " ", "GUT", " ", "that", " ", "unifies", " ", 
+      "the", " ", "Standard"}], "-", 
+     RowBox[{"Model", " ", "gauge", " ", 
+      RowBox[{"fields", ":", " ", 
+       RowBox[{"SU", 
+        RowBox[{"(", "3", ")"}], "*", "SU", 
+        RowBox[{"(", "2", ")"}], "*", "U", 
+        RowBox[{"(", "1", ")"}]}]}]}]}], ",", " ", "QCD", ",", " ", 
+    RowBox[{"weak", " ", "isospin"}], ",", " ", 
+    RowBox[{
+     RowBox[{"weak", " ", 
+      RowBox[{"hypercharge", ".", " ", "The"}], " ", "WHC", " ", "is", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"-", "5"}], "/", "6"}], ")"}], " ", "*", " ", "the", " ", "U", 
+      RowBox[{"(", "1", ")"}], " ", "factor", " ", "here", 
+      "\[IndentingNewLine]", "Gauge", "\[IndentingNewLine]", "g"}], " ", "-", 
+     " ", 
+     RowBox[{"SU", 
+      RowBox[{"(", "3", ")"}]}], " ", "-", " ", 
+     RowBox[{"(", 
+      RowBox[{"8", ",", "1", ",", "0"}], ")"}], " ", "-", " ", 
+     RowBox[{"gluon", "\[IndentingNewLine]", "W"}], " ", "-", " ", 
+     RowBox[{"SU", 
+      RowBox[{"(", "2", ")"}]}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", ",", "3", ",", "0"}], ")"}], "\[IndentingNewLine]", "B"}],
+      " ", "-", " ", 
+     RowBox[{"U", 
+      RowBox[{"(", "1", ")"}]}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", ",", "1", ",", "0"}], ")"}], "\[IndentingNewLine]", 
+      "Higgs"}], " ", "-", " ", 
+     RowBox[{"up", " ", "and", " ", "down", "\[IndentingNewLine]", "Hu"}], 
+     " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", 
+         RowBox[{"1", "/", "2"}]}], ")"}], " ", "/", " ", "Hu"}], "*", " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "2"}]}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{"up", " ", "Higgs", "\[IndentingNewLine]", "Hd"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "2"}]}], ")"}], " ", "/", " ", "Hd"}], "*",
+       " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", 
+         RowBox[{"1", "/", "2"}]}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{
+     "down", " ", "Higgs", "\[IndentingNewLine]", "Elementary", " ", 
+      "fermions", "\[IndentingNewLine]", "Q"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"3", ",", "2", ",", 
+         RowBox[{"1", "/", "6"}]}], ")"}], " ", "/", " ", "Q"}], "*", " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"3", "*"}], ",", "2", ",", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "6"}]}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{"quark", "\[IndentingNewLine]", "U"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"3", ",", "1", ",", 
+         RowBox[{"2", "/", "3"}]}], ")"}], " ", "/", " ", "U"}], "*", " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"3", "*"}], ",", "1", ",", 
+         RowBox[{
+          RowBox[{"-", "2"}], "/", "3"}]}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{"up", "\[IndentingNewLine]", "D"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"3", ",", "1", ",", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "3"}]}], ")"}], " ", "/", " ", "D"}], "*", 
+      " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"3", "*"}], ",", "1", ",", 
+         RowBox[{"1", "/", "3"}]}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{"down", "\[IndentingNewLine]", "L"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "2"}]}], ")"}], " ", "/", " ", "L"}], "*", 
+      " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", 
+         RowBox[{"1", "/", "2"}]}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{"lepton", "\[IndentingNewLine]", "N"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"1", ",", "1", ",", "0"}], ")"}], " ", "/", " ", "N"}], "*", 
+      " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "1", ",", "0"}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{"neutrino", "\[IndentingNewLine]", "E"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"1", ",", "1", ",", 
+         RowBox[{"-", "1"}]}], ")"}], " ", "/", " ", "E"}], "*", " ", 
+      RowBox[{"-", " ", 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "1", ",", "1"}], ")"}]}]}], " ", "-", " ", 
+     RowBox[{
+     "electron", "\[IndentingNewLine]", "Extras", "\[IndentingNewLine]", 
+      "HQ"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"HQ", "'"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"3", ",", "1", ",", 
+         RowBox[{
+          RowBox[{"-", "1"}], "/", "3"}]}], ")"}], " ", "/", " ", "HQ"}], 
+      "*"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"HQ", "'"}], "*", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"3", "*"}], ",", "1", ",", 
+        RowBox[{"1", "/", "3"}]}], ")"}], " ", "\"\<Higgs quark\>\"", 
+      "\[IndentingNewLine]", "LQ"}], " ", "-", " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"3", ",", "1", ",", 
+         RowBox[{
+          RowBox[{"-", "5"}], "/", "6"}]}], ")"}], " ", "/", " ", "LQ"}], "*",
+       " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"3", "*"}], ",", "1", ",", 
+        RowBox[{"5", "/", "6"}]}], ")"}], " ", "gauge", " ", 
+      "leptoquark"}]}]}], "\[IndentingNewLine]", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"gssu5", " ", "=", " ", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "4"}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"MakeRootDemoter", "[", 
+     RowBox[{"gssu5d321", ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "4"}], "}"}], ",", "3"}], "]"}], ";", " ", 
+    RowBox[{"gssu5d321", "[", "\"\<subtypes\>\"", "]"}]}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"The", " ", "\"\<interesting\>\"", " ", "irreps", " ", 
+    RowBox[{"here", " ", "--"}], " ", "adjoint", " ", "is", " ", "last"}], 
+   " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gssu5irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "1"}], "}"}]}], "}"}]}], 
+   ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"gssu5", ",", "gssu5irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"N", " ", "and", " ", "N", "*", " ", "are", " ", "1"}], ":", " ", 
+    
+    RowBox[{
+     RowBox[{
+     "scalar", ".", "\[IndentingNewLine]", "\[IndentingNewLine]", "Each"}], 
+     " ", "line", " ", "has", " ", "in", " ", 
+     RowBox[{"order", ":", " ", "degeneracy"}]}]}], ",", " ", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"SU", 
+       RowBox[{"(", "3", ")"}], 
+       RowBox[{"(", "QCD", ")"}], " ", "multiplet"}], ",", " ", 
+      RowBox[{"SU", 
+       RowBox[{"(", "2", ")"}], 
+       RowBox[{"(", "WIS", ")"}], " ", "multiplet", " ", 
+       RowBox[{"(", 
+        RowBox[{"value", " ", "2", "*", "WIS"}], ")"}]}]}], "}"}], " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"-", 
+       RowBox[{"(", 
+        RowBox[{"5", "/", "6"}], ")"}]}], "*", "WHC"}], "}"}]}]}], 
+  "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "5", " ", 
+     RowBox[{"(", 
+      RowBox[{"right", "-", "handed"}], ")"}], "\[IndentingNewLine]", 
+     RowBox[{"EF", ":", " ", 
+      RowBox[{"L", "*"}]}]}], ",", " ", 
+    RowBox[{"D", "\[IndentingNewLine]", 
+     RowBox[{"Higgs", ":", " ", 
+      RowBox[{"Hd", "*"}]}]}], ",", " ", 
+    RowBox[{"HQ", "\[IndentingNewLine]", "The", " ", "5", " ", 
+     RowBox[{"(", 
+      RowBox[{"left", "-", "handed"}], ")"}], "\[IndentingNewLine]", 
+     RowBox[{"Higgs", ":", " ", "Hu"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"HQ", "'"}], "*"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu5d321", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "10", " ", 
+     RowBox[{"(", 
+      RowBox[{"left", "-", "handed"}], ")"}], "\[IndentingNewLine]", 
+     RowBox[{"EF", ":", " ", "Q"}]}], ",", " ", 
+    RowBox[{"U", "*"}], ",", " ", 
+    RowBox[{"E", "*"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu5d321", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "10", "*", " ", 
+     RowBox[{"(", 
+      RowBox[{"right", "-", "handed"}], ")"}], "\[IndentingNewLine]", 
+     RowBox[{"EF", ":", " ", "U"}]}], ",", " ", 
+    RowBox[{"Q", "*"}], ",", " ", "E"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu5d321", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "5", "*", " ", 
+     RowBox[{"(", 
+      RowBox[{"left", "-", "handed"}], ")"}], "\[IndentingNewLine]", 
+     RowBox[{"EF", ":", " ", 
+      RowBox[{"D", "*"}]}]}], ",", " ", 
+    RowBox[{"L", "\[IndentingNewLine]", 
+     RowBox[{"Higgs", ":", " ", 
+      RowBox[{"HQ", "*"}]}]}], ",", " ", 
+    RowBox[{"Hd", "\[IndentingNewLine]", "The", " ", "5", "*", " ", 
+     RowBox[{"(", 
+      RowBox[{"right", "-", "handed"}], ")"}], "\[IndentingNewLine]", 
+     RowBox[{"Higgs", ":", " ", 
+      RowBox[{"HQ", "'"}]}]}], ",", " ", 
+    RowBox[{"Hu", "*"}]}], "  ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu5d321", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "24", " ", 
+     RowBox[{"(", 
+      RowBox[{"adjoint", " ", "-", " ", "gauge", "-", 
+       RowBox[{"field", " ", "symmetry"}]}], ")"}], "\[IndentingNewLine]", 
+     "LQ"}], ",", " ", "g", ",", " ", "W", ",", " ", 
+    RowBox[{"LQ", "*"}], ",", " ", "B"}], " ", "*)"}], "\[IndentingNewLine]", 
+  
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu5d321", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", 
+   " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Pati-Salam: SU(4) * SU(2) * SU(2)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Alternative", " ", "to", " ", "Georgi"}], "-", 
+     RowBox[{
+      RowBox[{"Glashow", ".", " ", 
+       RowBox[{"It", "'"}]}], "s", " ", "SU", 
+      RowBox[{"(", "4", ")"}], "*", "SU", 
+      RowBox[{"(", "2", ")"}], "*", "SU", 
+      RowBox[{"(", "2", ")"}], " ", "or", " ", "SO", 
+      RowBox[{"(", "6", ")"}], "*", "SO", 
+      RowBox[{
+       RowBox[{"(", "4", ")"}], " ", "--"}], " ", "color"}], "-", "left", "-", 
+     RowBox[{
+      RowBox[{
+      "right", ".", "\[IndentingNewLine]", "\[IndentingNewLine]", "The"}], 
+      " ", "SU", 
+      RowBox[{"(", "4", ")"}], " ", "breaks", " ", "down", " ", "into", " ", 
+      "SU", 
+      RowBox[{"(", "3", ")"}], "*", "U", 
+      RowBox[{"(", "1", ")"}], " ", "and", " ", "the", " ", "second", " ", 
+      "SU", 
+      RowBox[{"(", "2", ")"}], " ", "to", " ", "U", 
+      RowBox[{"(", "1", ")"}]}]}], ",", " ", 
+    RowBox[{"the", " ", "SU", 
+     RowBox[{"(", "3", ")"}], " ", "makes", " ", "QCD"}], ",", " ", 
+    RowBox[{"the", " ", "first", " ", "SU", 
+     RowBox[{"(", "2", ")"}], " ", "weak", " ", "isospin"}], ",", 
+    RowBox[{"while", " ", "the", " ", "two", " ", "U", 
+     RowBox[{
+      RowBox[{"(", "1", ")"}], "'"}], "s", " ", "combine", " ", "to", " ", 
+     "make", " ", "the", " ", "weak", " ", 
+     RowBox[{"hypercharge", ":", " ", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"2", "/", "3"}], ")"}], 
+        RowBox[{"(", "first", ")"}]}], " ", "+", " ", 
+       RowBox[{
+        RowBox[{"(", "second", ")"}], ".", "\[IndentingNewLine]", 
+        "x"}]}]}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gssu4", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"1", ",", "3"}], "}"}]}], ";", 
+   RowBox[{"MakeRootDemoter", "[", 
+    RowBox[{"gssu4d3", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "3"}], "}"}], ",", "3"}], "]"}], ";", " ", 
+   RowBox[{"gssu4d3", "[", "\"\<subtypes\>\"", "]"}], " "}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "\"\<interesting\>\"", " ", "irreps", " ", 
+     RowBox[{"here", " ", "--"}], " ", "fundamentals"}], ",", " ", 
+    RowBox[{"then", " ", "adjoint"}], ",", " ", 
+    RowBox[{"then", " ", "vector"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gssu4irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0"}], "}"}]}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"gssu4", ",", "gssu4irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"Higgs", " ", "particles", " ", "are", " ", 
+     RowBox[{"(", 
+      RowBox[{"1", ",", "2", ",", "2"}], ")"}]}], " ", "-", " ", "Hu"}], ",", 
+   
+   RowBox[{"Hd", " ", "and", " ", "Hu", "*"}], ",", 
+   RowBox[{"Hd", "*"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Elementary", " ", 
+     RowBox[{"fermions", ":", " ", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"4", ",", "2", ",", "1"}], ")"}], " ", "and", " ", 
+       RowBox[{"(", 
+        RowBox[{"4", ",", "1", ",", "2"}], ")"}]}]}]}], ",", " ", 
+    RowBox[{"left", "-", 
+     RowBox[{"handed", " ", "and", " ", "right"}], "-", 
+     RowBox[{
+      RowBox[{"handed", " ", "--"}], " ", 
+      RowBox[{"(", 
+       RowBox[{"Q", ",", "L"}], ")"}], " ", "and", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"U", ",", "D"}], ")"}], ",", 
+        RowBox[{"(", 
+         RowBox[{"N", ",", "E"}], ")"}]}], ")"}]}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu4d3", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Elementary", " ", 
+     RowBox[{"antifermions", ":", " ", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"4", "*"}], ",", "2", ",", "1"}], ")"}], " ", "and", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"4", "*"}], ",", "1", ",", "2"}], ")"}]}]}]}], ",", " ", 
+    RowBox[{"right", "-", 
+     RowBox[{"handed", " ", "and", " ", "left"}], "-", 
+     RowBox[{
+      RowBox[{"handed", " ", "--"}], " ", 
+      RowBox[{"(", 
+       RowBox[{"L", ",", "Q"}], ")"}], " ", "and", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"D", ",", "U"}], ")"}], ",", 
+        RowBox[{"(", 
+         RowBox[{"E", ",", "N"}], ")"}]}], ")"}], " ", "all", " ", "*", "'", 
+      "d"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu4d3", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Gauge", ":", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"15", ",", "1", ",", "1"}], ")"}], " ", "+", " ", 
+      RowBox[{"(", 
+       RowBox[{"1", ",", "3", ",", "1"}], ")"}], " ", "+", " ", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"1", ",", "1", ",", "3"}], ")"}], "\[IndentingNewLine]", 
+       "The", " ", 
+       RowBox[{"(", 
+        RowBox[{"15", ",", "1", ",", "1"}], ")"}], " ", "decomposes", " ", 
+       "into", " ", "the", " ", "gluons"}]}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"some", " ", "quark"}], "-", 
+     RowBox[{"like", " ", "particles"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"and", " ", "a", " ", "B"}], "-", 
+     RowBox[{"like", " ", 
+      RowBox[{"particle", ".", "\[IndentingNewLine]", "The"}], " ", 
+      RowBox[{"(", 
+       RowBox[{"1", ",", "3", ",", "1"}], ")"}], " ", "becomes", " ", "the", 
+      " ", "W"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"while", " ", "the", " ", 
+      RowBox[{"(", 
+       RowBox[{"1", ",", "1", ",", "3"}], ")"}], " ", "decomposes", " ", 
+      "into", " ", "a", " ", "B"}], "-", 
+     RowBox[{
+     "like", " ", "particle", " ", "and", " ", "a", " ", "charged", " ", 
+      RowBox[{"version", "."}]}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu4d3", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "1"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Extra", " ", "from", " ", "SO", 
+     RowBox[{"(", "10", ")"}]}], ":", " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"6", ",", "1", ",", "1"}], ")"}], " ", "--"}], " ", "extra", 
+     " ", "\"\<Higgs quark\>\"", " ", "here", " ", "also"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gssu4d3", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0"}], "}"}]}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["SO(10) to Georgi-Glashow", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Decompose", " ", "into", " ", "Georgi"}], "-", 
+     RowBox[{
+      RowBox[{"Glashow", " ", "--"}], " ", "makes", " ", "SU", 
+      RowBox[{"(", "5", ")"}], "*", "U", 
+      RowBox[{
+       RowBox[{"(", "1", ")"}], ".", " ", "The"}], " ", "U", 
+      RowBox[{"(", "1", ")"}], " ", "factor", " ", "combined", " ", "with", 
+      " ", "hypercharge", " ", "makes", " ", 
+      RowBox[{"(", 
+       RowBox[{"B", "-", "L"}], ")"}]}]}], ",", " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"baryon", " ", "number"}], ")"}], " ", "-", " ", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"lepton", " ", "number"}], ")"}], ".", "\[IndentingNewLine]", 
+       "B"}], "-", "L"}], " ", "=", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"4", "/", "5"}], ")"}], "*", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"-", 
+         RowBox[{"(", 
+          RowBox[{"U", 
+           RowBox[{"(", "1", ")"}], " ", "factor"}], ")"}]}], " ", "+", " ", 
+        RowBox[{"(", "hypercharge", ")"}]}], ")"}]}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gsso10", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"4", ",", "5"}], "}"}]}], ";", 
+   RowBox[{"MakeRootDemoter", "[", 
+    RowBox[{"gsso10d5", ",", 
+     RowBox[{"{", 
+      RowBox[{"4", ",", "5"}], "}"}], ",", "5"}], "]"}], ";", " ", 
+   RowBox[{"gsso10d5", "[", "\"\<subtypes\>\"", "]"}], " "}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "\"\<interesting\>\"", " ", "irreps", " ", 
+     RowBox[{"here", " ", "--"}], " ", "scalar"}], ",", " ", "vector", ",", 
+    " ", "spinors", ",", " ", "adjoint"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gsso10irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}]}], 
+     "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"gsso10", ",", "gsso10irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "10", " ", "is", " ", "the", " ", "SO", 
+     RowBox[{"(", "10", ")"}], " ", 
+     RowBox[{"Higgs", ":", "\[IndentingNewLine]", "5"}]}], ",", " ", 
+    RowBox[{"5", "*"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d5", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "16", " ", "is", " ", "the", " ", "SO", 
+      RowBox[{"(", "10", ")"}], " ", "elementary", " ", "left"}], "-", 
+     RowBox[{"handed", " ", 
+      RowBox[{"fermions", ":", "\[IndentingNewLine]", "10"}]}]}], ",", " ", 
+    RowBox[{"5", "*"}], ",", " ", "1"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d5", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "16", "*", " ", "is", " ", "the", " ", "SO", 
+      RowBox[{"(", "10", ")"}], " ", "elementary", " ", "right"}], "-", 
+     RowBox[{"handed", " ", 
+      RowBox[{"fermions", ":", "\[IndentingNewLine]", "5"}]}]}], ",", " ", 
+    RowBox[{"10", "*"}], ",", " ", 
+    RowBox[{"1", "*"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d5", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "45", " ", "is", " ", "the", " ", "SO", 
+     RowBox[{"(", "10", ")"}], " ", "gauge", " ", 
+     RowBox[{"multiplet", ":", "\[IndentingNewLine]", "10"}]}], ",", " ", 
+    "24", ",", " ", 
+    RowBox[{"10", "*"}], ",", " ", 
+    RowBox[{"1", "\[IndentingNewLine]", "The", " ", "1"}], ",", " ", "10", 
+    ",", " ", 
+    RowBox[{
+    "and", " ", "10", "*", " ", "are", " ", "extra", " ", "gauge", " ", 
+     "particles"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d5", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["SO(10) to Pati-Salam", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"Decompose", " ", "into", " ", "Pati"}], "-", 
+     RowBox[{
+      RowBox[{"Salam", " ", "--"}], " ", "makes", " ", "SU", 
+      RowBox[{"(", "4", ")"}], "*", "SU", 
+      RowBox[{"(", "2", ")"}], "*", "SU", 
+      RowBox[{"(", "2", ")"}]}]}], ",", " ", 
+    RowBox[{
+    "though", " ", "it", " ", "comes", " ", "out", " ", "as", " ", "SO", 
+     RowBox[{"(", "6", ")"}], "*", "SO", 
+     RowBox[{"(", "4", ")"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"MakeExtensionSplitter", "[", 
+    RowBox[{"gsso10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"4", ",", "5"}], "}"}], ",", "3"}], "]"}], ";", " ", 
+   RowBox[{"gsso10d64", "[", "\"\<subtypes\>\"", "]"}], " "}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"The", " ", "10", " ", "is", " ", "the", " ", "SO", 
+    RowBox[{"(", "10", ")"}], " ", 
+    RowBox[{"Higgs", ":", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"becomes", " ", "the", " ", "Pati"}], "-", 
+      RowBox[{"Salam", " ", "Higgs", " ", 
+       RowBox[{"(", 
+        RowBox[{"1", ",", "2", ",", "2"}], ")"}], " ", "and", " ", "a", " ", 
+       RowBox[{"(", 
+        RowBox[{"6", ",", "1", ",", "1"}], ")"}], " ", "in", " ", 
+       "PS"}]}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "16", " ", "is", " ", "the", " ", "SO", 
+      RowBox[{"(", "10", ")"}], " ", "elementary", " ", "right"}], "-", 
+     RowBox[{"handed", " ", 
+      RowBox[{"fermions", ":", "\[IndentingNewLine]", 
+       RowBox[{"(", 
+        RowBox[{"4", ",", "1", ",", "2"}], ")"}]}]}]}], ",", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"4", "*"}], ",", "2", ",", "1"}], ")"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "16", " ", "is", " ", "the", " ", "SO", 
+      RowBox[{"(", "10", ")"}], " ", "elementary", " ", "left"}], "-", 
+     RowBox[{"handed", " ", 
+      RowBox[{"fermions", ":", "\[IndentingNewLine]", 
+       RowBox[{"(", 
+        RowBox[{"4", ",", "2", ",", "1"}], ")"}]}]}]}], ",", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"4", "*"}], ",", "1", ",", "2"}], ")"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "45", " ", "is", " ", "the", " ", "SO", 
+     RowBox[{"(", "10", ")"}], " ", "gauge", " ", 
+     RowBox[{"multiplet", ":", "\[IndentingNewLine]", 
+      RowBox[{"(", 
+       RowBox[{"15", ",", "1", ",", "1"}], ")"}]}]}], ",", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "3", ",", "1"}], ")"}], ",", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "1", ",", "3"}], ")"}], ",", " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"15", ",", "2", ",", "2"}], ")"}], "\[IndentingNewLine]", 
+      "The", " ", "three", " ", "Pati"}], "-", 
+     RowBox[{
+     "Salam", " ", "gauge", " ", "fields", " ", "with", " ", "an", " ", 
+      "extra", " ", "one"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gsso10d64", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1", ",", "0", ",", "0", ",", "0"}], "}"}]}], "]"}], 
+   "  ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["E(6) to SO(10)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Decomposes", " ", "into", " ", "SO", 
+    RowBox[{"(", "10", ")"}], "*", "U", 
+    RowBox[{"(", "1", ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gse6", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"5", ",", "6"}], "}"}]}], ";", 
+   RowBox[{"MakeRootDemoter", "[", 
+    RowBox[{"gse6d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"5", ",", "6"}], "}"}], ",", "5"}], "]"}], ";", " ", 
+   RowBox[{"gse6d10", "[", "\"\<subtypes\>\"", "]"}], " "}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "\"\<interesting\>\"", " ", "irreps", " ", 
+     RowBox[{"here", " ", "--"}], " ", "scalar"}], ",", " ", "fundamentals", 
+    ",", " ", "adjoint"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gse6irreps", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}],
+       ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0"}], "}"}],
+       ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1", ",", "0"}], "}"}],
+       ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "1"}], 
+       "}"}]}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"ShowIrrepListProperties", "[", 
+   RowBox[{"gse6", ",", "gse6irreps"}], "]"}], " ", "//", " ", 
+  "MatrixForm"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Cube", " ", "of", " ", "the", " ", "fundamental", " ", 
+    RowBox[{"rep", ".", " ", "Note"}], " ", "that", " ", "the", " ", 
+    "symmetric", " ", "part", " ", "contains", " ", "a", " ", "scalar"}], ",",
+    " ", 
+   RowBox[{
+    RowBox[{
+    "thus", " ", "making", " ", "it", " ", "fit", " ", "with", " ", "SUSY"}], 
+    "-", 
+    RowBox[{"style", " ", "interactions"}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"DecomposeRepCubeLabeled", "[", 
+   RowBox[{"gse6", ",", 
+    RowBox[{"gse6irreps", "[", 
+     RowBox[{"[", "2", "]"}], "]"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "27", " ", "is", " ", "left"}], "-", 
+     RowBox[{
+      RowBox[{"handed", ".", "\[IndentingNewLine]", "It"}], " ", "becomes", 
+      " ", "10"}], " ", "+", " ", 
+     RowBox[{"16", "*", " ", 
+      RowBox[{"+", " ", 
+       RowBox[{"1", " ", "--"}]}], " ", "Higgs"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"EF", "'"}], "s"}], ",", " ", "singlet"}], "  ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "27", "*", " ", "is", " ", "right"}], "-", 
+     RowBox[{
+      RowBox[{"handed", ".", "\[IndentingNewLine]", "It"}], " ", "becomes", 
+      " ", "16"}], " ", "+", " ", "10", " ", "+", " ", 
+     RowBox[{
+      RowBox[{"1", " ", "--"}], " ", "Higgs"}]}], ",", " ", 
+    RowBox[{
+     RowBox[{"EF", "'"}], "s"}], ",", " ", "singlet"}], "  ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1", ",", "0"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"I", " ", "listed", " ", "Higgses", " ", "here"}], ",", " ", 
+   RowBox[{
+    RowBox[{"because", " ", "the", " ", 
+     RowBox[{"10", "'"}], "s", " ", "are", " ", "Higgs"}], "-", "like"}], ",",
+    " ", 
+   RowBox[{
+    RowBox[{"even", " ", "though", " ", 
+     RowBox[{"there", "'"}], "s", " ", "only", " ", "one", " ", "low"}], "-", 
+    
+    RowBox[{"energy", " ", "10", " ", "of", " ", "Higgs"}]}], ",", " ", 
+   RowBox[{"and", " ", "not", " ", "three"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"The", " ", "78", " ", "is", " ", "the", " ", "gauge", " ", 
+      RowBox[{"one", ".", "\[IndentingNewLine]", "It"}], " ", "becomes", " ", 
+      "16", "*", " ", 
+      RowBox[{"+", " ", "45"}]}], " ", "+", " ", "16", " ", "+", " ", 
+     RowBox[{
+      RowBox[{"1", " ", "--"}], "\[IndentingNewLine]", "extra", " ", 
+      "spinor"}]}], ",", " ", 
+    RowBox[{"SO", 
+     RowBox[{"(", "10", ")"}], " ", "gauge"}], ",", " ", 
+    RowBox[{"extra", " ", "spinor"}], ",", " ", 
+    RowBox[{"extra", " ", "singlet"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d10", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "1"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["E(6) to Trinification", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Decomposes", " ", "into", " ", "SU", 
+     RowBox[{
+      RowBox[{"(", "3", ")"}], "^", "3"}]}], " ", "-", " ", 
+    RowBox[{"a", " ", "\"\<trinification\>\"", " ", 
+     RowBox[{"model", ".", " ", 
+      RowBox[{"BrancherConjugate", "[", "]"}]}], " ", "was", " ", "used", " ",
+      "to", " ", "make", " ", "the", " ", "highest", " ", "weights", " ", 
+     "look", " ", "more", " ", "symmetric"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gse6", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"5", ",", "6"}], "}"}]}], ";", 
+   RowBox[{"MakeExtensionSplitter", "[", 
+    RowBox[{"gse6d330", ",", 
+     RowBox[{"{", 
+      RowBox[{"5", ",", "6"}], "}"}], ",", "3"}], "]"}], ";", " ", 
+   RowBox[{"BrancherConjugate", "[", 
+    RowBox[{"gse6d33", ",", "gse6d330", ",", 
+     RowBox[{"{", "1", "}"}]}], "]"}], ";", 
+   RowBox[{"gse6d33", "[", "\"\<subtypes\>\"", "]"}], " "}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Notice", " ", "how", " ", "the", " ", "27", " ", "and", " ", "the", " ", 
+    "27", "*", " ", "are", " ", "mirror", " ", "images"}], ",", " ", 
+   RowBox[{"and", " ", "notice", " ", "also", " ", "their", " ", 
+    RowBox[{"cyclicity", "."}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "27", " ", "becomes", " ", 
+     RowBox[{"(", 
+      RowBox[{"1", ",", "3", ",", 
+       RowBox[{"3", "*"}]}], " ", ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"3", "*"}], ",", "1", ",", "3"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"3", ",", 
+      RowBox[{"3", "*"}], ",", "1"}], ")"}]}], " ", "*)"}], 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d33", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "27", "*", " ", "becomes", " ", 
+     RowBox[{"(", 
+      RowBox[{"3", ",", "1", ",", 
+       RowBox[{"3", "*"}]}], " ", ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", 
+      RowBox[{"3", "*"}], ",", "3"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"3", "*"}], ",", "3", ",", "1"}], ")"}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d33", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1", ",", "0"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "adjoint"}], ",", " ", "78", ",", " ", 
+    RowBox[{
+     RowBox[{"becomes", " ", 
+      RowBox[{"(", 
+       RowBox[{"8", ",", "1", ",", "1"}], ")"}]}], " ", "+", " ", 
+     RowBox[{"(", 
+      RowBox[{"1", ",", "8", ",", "1"}], ")"}], " ", "+", " ", 
+     RowBox[{"(", 
+      RowBox[{"1", ",", "1", ",", "8"}], ")"}], " ", "+", " ", 
+     RowBox[{"(", 
+      RowBox[{"3", ",", "3", ",", "3"}], ")"}], " ", "+", " ", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"3", "*"}], ",", 
+       RowBox[{"3", "*"}], ",", 
+       RowBox[{"3", "*"}]}], " ", ")"}]}]}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d33", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "1"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["E(6) to SU(6)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"gse6", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{"5", ",", "6"}], "}"}]}], ";", 
+  RowBox[{"MakeExtensionSplitter", "[", 
+   RowBox[{"gse6d6", ",", 
+    RowBox[{"{", 
+     RowBox[{"5", ",", "6"}], "}"}], ",", "6"}], "]"}], ";", " ", 
+  RowBox[{"gse6d6", "[", "\"\<subtypes\>\"", "]"}], " "}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "With", " ", "the", " ", "conventions", " ", "in", " ", "my", " ", 
+    "code"}], ",", " ", 
+   RowBox[{"reverse", " ", "the", " ", "two", " ", 
+    RowBox[{"roots", "/", "weights"}], " ", "of", " ", "the", " ", "first", 
+    " ", "SU", 
+    RowBox[{"(", "3", ")"}], " ", "to", " ", "make", " ", "it", " ", "look", 
+    " ", 
+    RowBox[{"prettier", ".", " ", "Notice"}], " ", "how", " ", "the", " ", 
+    "27", " ", "and", " ", "the", " ", "27", "*", " ", "are", " ", "mirror", 
+    " ", "images"}], ",", " ", 
+   RowBox[{"and", " ", "notice", " ", "also", " ", "their", " ", 
+    RowBox[{"cyclicity", "."}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "27", " ", "becomes", " ", 
+     RowBox[{"(", 
+      RowBox[{"6", ",", "2"}], ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"15", "*"}], ",", "1"}], ")"}]}], " ", "*)"}], 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d6", ",", 
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "27", "*", " ", "becomes", " ", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"6", "*"}], ",", "2"}], ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"15", ",", "1"}], ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d6", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "1", ",", "0"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"The", " ", "adjoint"}], ",", " ", "78", ",", " ", 
+    RowBox[{
+     RowBox[{"becomes", " ", 
+      RowBox[{"(", 
+       RowBox[{"35", ",", "1"}], ")"}]}], " ", "+", " ", 
+     RowBox[{"(", 
+      RowBox[{"1", ",", "3"}], ")"}], " ", "+", " ", 
+     RowBox[{"(", 
+      RowBox[{"20", ",", "2"}], ")"}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse6d6", ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "1"}], 
+      "}"}]}], "]"}], "  ", "//", " ", "MatrixForm"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["E(8) Splits", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+    "This", " ", "is", " ", "part", " ", "of", " ", "the", " ", "HE", " ", 
+     "heterotic", " ", "string"}], ";", " ", 
+    RowBox[{"it", " ", "has", " ", "an", " ", "E", 
+     RowBox[{"(", "8", ")"}], "*", "E", 
+     RowBox[{"(", "8", ")"}], " ", "gauge", " ", 
+     RowBox[{"symmetry", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"gse8", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"5", ",", "8"}], "}"}]}], ";"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Fundamental", " ", "rep"}], " ", "=", " ", 
+    RowBox[{"adjoint", " ", "rep"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"gse8scalar", " ", "=", " ", 
+     RowBox[{"{", 
+      RowBox[{
+      "0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0", ",", 
+       "0"}], "}"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"gse8fund", " ", "=", " ", 
+     RowBox[{"{", 
+      RowBox[{
+      "0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "0", ",", "1", ",", 
+       "0"}], "}"}]}], ";", " ", 
+    RowBox[{
+     RowBox[{"ShowIrrepListProperties", "[", 
+      RowBox[{"gse8", ",", 
+       RowBox[{"{", 
+        RowBox[{"gse8scalar", ",", "gse8fund"}], "}"}]}], "]"}], " ", "//", 
+     " ", "MatrixForm"}]}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Decompose", " ", "into", " ", "E", 
+    RowBox[{"(", "6", ")"}], "*", "SU", 
+    RowBox[{"(", "3", ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"MakeExtensionSplitter", "[", 
+    RowBox[{"gse8d63", ",", 
+     RowBox[{"{", 
+      RowBox[{"5", ",", "8"}], "}"}], ",", "6"}], "]"}], ";", " ", 
+   RowBox[{"gse8d63", "[", "\"\<subtypes\>\"", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Splits", " ", "into", "\[IndentingNewLine]", 
+     RowBox[{"(", 
+      RowBox[{"78", ",", "1"}], ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "8"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"27", "*"}], ",", "3"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"27", ",", 
+      RowBox[{"3", "*", "."}]}], ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse8d63", ",", "gse8fund"}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Decompose", " ", "into", " ", "SO", 
+    RowBox[{"(", "10", ")"}], "*", "SU", 
+    RowBox[{
+     RowBox[{"(", "4", ")"}], "/", "SO"}], 
+    RowBox[{"(", "6", ")"}]}], " ", "*)"}], 
+  RowBox[{
+   RowBox[{"MakeExtensionSplitter", "[", 
+    RowBox[{"gse8d104", ",", 
+     RowBox[{"{", 
+      RowBox[{"5", ",", "8"}], "}"}], ",", "5"}], "]"}], ";", " ", 
+   RowBox[{"gse8d104", "[", "\"\<subtypes\>\"", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Splits", " ", "into", "\[IndentingNewLine]", 
+     RowBox[{"(", 
+      RowBox[{"45", ",", "1"}], ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "15"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"16", ",", "4"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"10", ",", "6"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"16", "*"}], ",", 
+      RowBox[{"4", "*", "."}]}], ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse8d104", ",", "gse8fund"}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Decompose", " ", "into", " ", "SU", 
+   RowBox[{"(", "5", ")"}], "*", "SU", 
+   RowBox[{"(", "5", ")"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"MakeExtensionSplitter", "[", 
+   RowBox[{"gse8d55", ",", 
+    RowBox[{"{", 
+     RowBox[{"5", ",", "8"}], "}"}], ",", "4"}], "]"}], ";", " ", 
+  RowBox[{"gse8d55", "[", "\"\<subtypes\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"Splits", " ", "into", " ", 
+     RowBox[{"(", 
+      RowBox[{"1", ",", "24"}], ")"}]}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"10", ",", 
+      RowBox[{"5", "*"}]}], " ", ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"5", "*"}], ",", 
+      RowBox[{"10", "*"}]}], " ", ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"5", ",", "10"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"10", "*"}], ",", "5"}], ")"}], " ", "+", " ", 
+    RowBox[{"(", 
+     RowBox[{"24", ",", "1"}], ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"DoBranching", "[", 
+    RowBox[{"gse8d55", ",", "gse8fund"}], "]"}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"]
+}, Closed]]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Mathematical Curiosities", "Section"],
+
+Cell[CellGroupData[{
+
+Cell["John Baez and G(2)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{"John", " ", "Baez"}], ",", " ", 
+    RowBox[{"in", " ", "his", " ", "treatise", " ", "on", " ", "octonions"}], 
+    ",", " ", 
+    RowBox[{
+     RowBox[{"http", ":"}], "//", 
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{
+          RowBox[{"math", ".", "ucr", ".", "edu"}], "/", "home"}], "/", 
+         "baez"}], "/", "octonions"}], "/", " ", "mentions"}], " ", "that", 
+      " ", "G", 
+      RowBox[{"(", "2", ")"}], " ", "is", " ", "a", " ", "subalgebra", " ", 
+      "of", " ", "SO", 
+      RowBox[{"(", "7", ")"}]}]}], ",", " ", 
+    RowBox[{
+    "which", " ", "is", " ", "in", " ", "turn", " ", "a", " ", "subalgebra", 
+     " ", "of", " ", "SO", 
+     RowBox[{
+      RowBox[{"(", "8", ")"}], ".", " ", "This"}], " ", "section", " ", 
+     "will", " ", "demonstrate", " ", "those", " ", 
+     RowBox[{"relations", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"jbg2", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}]}], ";", " ", 
+   RowBox[{"jbb3", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"2", ",", "3"}], "}"}]}], ";", " ", 
+   RowBox[{"jbd4", " ", "=", " ", 
+    RowBox[{"{", 
+     RowBox[{"4", ",", "4"}], "}"}]}], ";", " ", 
+   RowBox[{"SubalgExtra", "[", 
+    RowBox[{"jbb3g2", ",", "\"\<B3G2\>\""}], "]"}], ";", " ", 
+   RowBox[{"SubalgSOEvenOdd", "[", 
+    RowBox[{"jbd4b3", ",", "4", ",", "0"}], "]"}], ";", " ", 
+   RowBox[{"SubalgExtra", "[", 
+    RowBox[{"jbd4g2", ",", "\"\<D4G2\>\""}], "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"G", 
+      RowBox[{"(", "2", ")"}]}], ":", " ", "Adjoint"}], ",", " ", 
+    "fundamental"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"#", ",", 
+       RowBox[{"TotalDegen", "[", 
+        RowBox[{"jbg2", ",", "#"}], "]"}]}], "}"}], "&"}], " ", "/@", " ", 
+    RowBox[{"IdentityMatrix", "[", "2", "]"}]}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"SO", 
+      RowBox[{"(", "7", ")"}]}], ":", " ", "Vector"}], ",", " ", "adjoint", 
+    ",", " ", "spinor"}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"#", ",", 
+       RowBox[{"TotalDegen", "[", 
+        RowBox[{"jbb3", ",", "#"}], "]"}]}], "}"}], "&"}], " ", "/@", " ", 
+    RowBox[{"IdentityMatrix", "[", "3", "]"}]}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"SO", 
+      RowBox[{"(", "8", ")"}]}], ":", " ", "vector"}], ",", " ", "adjoint", 
+    ",", " ", 
+    RowBox[{"both", " ", "spinors"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"#", ",", 
+       RowBox[{"TotalDegen", "[", 
+        RowBox[{"jbd4", ",", "#"}], "]"}]}], "}"}], "&"}], " ", "/@", " ", 
+    RowBox[{"IdentityMatrix", "[", "4", "]"}]}], " ", "//", " ", 
+   "MatrixForm"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+  "Cube", " ", "of", " ", "the", " ", "fundamental", " ", "rep", " ", "of", 
+   " ", 
+   RowBox[{"G2", ".", " ", "Note"}], " ", "that", " ", "the", " ", 
+   "antisymmetric", " ", "part", " ", "contains", " ", "a", " ", 
+   RowBox[{"scalar", "."}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"MatrixForm", " ", "/@", " ", 
+  RowBox[{"DecomposeRepCubeLabeled", "[", 
+   RowBox[{"jbg2", ",", 
+    RowBox[{"{", 
+     RowBox[{"0", ",", "1"}], "}"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"SO", 
+     RowBox[{"(", "7", ")"}], " ", "to", " ", "G", 
+     RowBox[{"(", "2", ")"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"Vector", " ", "\[Rule]", " ", "fund"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Adjoint", " ", "\[Rule]", " ", "adj"}], ",", " ", "fund", ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Spinor", " ", "\[Rule]", " ", "fund"}], ",", " ", "scalar"}], 
+   "\[IndentingNewLine]", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"MatrixForm", "[", 
+     RowBox[{"DoBranching", "[", 
+      RowBox[{"jbb3g2", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+   RowBox[{"IdentityMatrix", "[", "3", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"SO", 
+     RowBox[{"(", "8", ")"}], " ", "to", " ", "SO", 
+     RowBox[{"(", "7", ")"}]}], ",", "\[IndentingNewLine]", 
+    RowBox[{"Vector", " ", "\[Rule]", " ", "vector"}], ",", " ", "scalar", 
+    ",", "\[IndentingNewLine]", 
+    RowBox[{"Adjoint", " ", "\[Rule]", " ", "adj"}], ",", " ", "vector", ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Spinors", " ", "\[Rule]", " ", "spinor"}]}], 
+   "\[IndentingNewLine]", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"MatrixForm", "[", 
+     RowBox[{"DoBranching", "[", 
+      RowBox[{"jbd4b3", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+   RowBox[{"IdentityMatrix", "[", "4", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"SO", 
+     RowBox[{"(", "8", ")"}], " ", "to", " ", "G", 
+     RowBox[{"(", "2", ")"}]}], ",", "\[IndentingNewLine]", "Vector", ",", 
+    " ", 
+    RowBox[{"spinors", " ", "\[Rule]", " ", "fund"}], ",", " ", "scalar", ",",
+     "\[IndentingNewLine]", 
+    RowBox[{"Adjoint", " ", "\[Rule]", " ", "adj"}], ",", " ", "fund"}], 
+   "\[IndentingNewLine]", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"MatrixForm", "[", 
+     RowBox[{"DoBranching", "[", 
+      RowBox[{"jbd4g2", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+   RowBox[{"IdentityMatrix", "[", "4", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"G", 
+   RowBox[{"(", "2", ")"}], " ", "itself", " ", "breaks", " ", "down", " ", 
+   "into", " ", "some", " ", "other", " ", 
+   RowBox[{"groups", "."}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Demote", " ", "the", " ", "first", " ", "root", " ", "to", " ", "a", " ", 
+    "U", 
+    RowBox[{"(", "1", ")"}]}], ";", " ", 
+   RowBox[{"what", " ", "remains", " ", "is", " ", "A", 
+    RowBox[{"(", "1", ")"}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"MakeRootDemoter", "[", 
+   RowBox[{"jbg2r1", ",", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}], ",", "1"}], "]"}], ";", " ", 
+  RowBox[{"jbg2r1", "[", "\"\<subtypes\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"MatrixForm", "[", 
+    RowBox[{"DoBranching", "[", 
+     RowBox[{"jbg2r1", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+  RowBox[{"IdentityMatrix", "[", "2", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+   "Demote", " ", "the", " ", "second", " ", "root", " ", "to", " ", "a", " ",
+     "U", 
+    RowBox[{"(", "1", ")"}]}], ";", " ", 
+   RowBox[{"what", " ", "remains", " ", "is", " ", "A", 
+    RowBox[{"(", "1", ")"}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"MakeRootDemoter", "[", 
+   RowBox[{"jbg2r2", ",", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}], ",", "2"}], "]"}], ";", " ", 
+  RowBox[{"jbg2r2", "[", "\"\<subtypes\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"MatrixForm", "[", 
+    RowBox[{"DoBranching", "[", 
+     RowBox[{"jbg2r2", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+  RowBox[{"IdentityMatrix", "[", "2", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+  "Turn", " ", "the", " ", "whole", " ", "algebra", " ", "into", " ", "an", 
+   " ", "A", 
+   RowBox[{"(", "1", ")"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"SubalgHeightA1", "[", 
+   RowBox[{"jbg2ht", ",", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}]}], "]"}], ";", " ", 
+  RowBox[{"jbg2ht", "[", "\"\<subtypes\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"MatrixForm", "[", 
+    RowBox[{"DoBranching", "[", 
+     RowBox[{"jbg2ht", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+  RowBox[{"IdentityMatrix", "[", "2", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Split", " ", "on", " ", "the", " ", "first", " ", "root"}], ";", 
+   " ", 
+   RowBox[{"the", " ", "result", " ", "is", " ", "A", 
+    RowBox[{"(", "1", ")"}], " ", "*", " ", "A", 
+    RowBox[{"(", "1", ")"}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"MakeExtensionSplitter", "[", 
+   RowBox[{"jbg2s1", ",", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}], ",", "1"}], "]"}], ";", " ", 
+  RowBox[{"jbg2s1", "[", "\"\<subtypes\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"MatrixForm", "[", 
+    RowBox[{"DoBranching", "[", 
+     RowBox[{"jbg2s1", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+  RowBox[{"IdentityMatrix", "[", "2", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Split", " ", "on", " ", "the", " ", "second", " ", "root"}], ";", 
+   " ", 
+   RowBox[{"the", " ", "result", " ", "is", " ", "A", 
+    RowBox[{"(", "2", ")"}], " ", "or", " ", "SU", 
+    RowBox[{"(", "3", ")"}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"MakeExtensionSplitter", "[", 
+   RowBox[{"jbg2s2", ",", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}], ",", "2"}], "]"}], ";", " ", 
+  RowBox[{"jbg2s2", "[", "\"\<subtypes\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"MatrixForm", "[", 
+    RowBox[{"DoBranching", "[", 
+     RowBox[{"jbg2s2", ",", "#"}], "]"}], "]"}], "&"}], " ", "/@", " ", 
+  RowBox[{"IdentityMatrix", "[", "2", "]"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Giulio Racah and G(2)", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"In", " ", "1949"}], ",", " ", 
+   RowBox[{
+    RowBox[{
+    "Giulio", " ", "Racah", " ", "attempted", " ", "to", " ", "analyze", " ", 
+     "the", " ", "f", " ", "electrons", " ", "of", " ", "lanthanides", " ", 
+     "and", " ", 
+     RowBox[{"actinides", ".", " ", "He"}], " ", "created", " ", "a", " ", 
+     "cascade", " ", "of", " ", 
+     RowBox[{"algebras", ":", " ", 
+      RowBox[{"SU", 
+       RowBox[{"(", "7", ")"}]}]}]}], " ", "\[Rule]", " ", 
+    RowBox[{
+     RowBox[{"SO", 
+      RowBox[{"(", "7", ")"}]}], " ", "\[Rule]", " ", 
+     RowBox[{
+      RowBox[{"G", 
+       RowBox[{"(", "2", ")"}]}], " ", "\[Rule]", " ", 
+      RowBox[{"SU", 
+       RowBox[{
+        RowBox[{"(", "2", ")"}], ".", " ", "I"}], " ", "will", " ", "show", 
+       " ", "here", " ", "what", " ", "his", " ", "work", " ", "is", " ", 
+       "equivalent", " ", 
+       RowBox[{"to", ":", " ", 
+        RowBox[{
+        "finding", " ", "the", " ", "height", " ", "subalgebra", " ", "of", 
+         " ", "SU", 
+         RowBox[{
+          RowBox[{"(", "7", ")"}], "."}]}]}]}]}]}]}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"SubalgSUSO", "[", 
+   RowBox[{"gr1", ",", "7"}], "]"}], ";", " ", 
+  RowBox[{"SubalgExtra", "[", 
+   RowBox[{"gr2", ",", "\"\<B3G2\>\""}], "]"}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{"SubalgExtra", "[", 
+   RowBox[{"gr3", ",", "\"\<G2A1\>\""}], "]"}], ";", " ", 
+  RowBox[{"ConcatBranchers", "[", 
+   RowBox[{"gr12", ",", "gr1", ",", "1", ",", "gr2"}], "]"}], ";", 
+  RowBox[{"ConcatBranchers", "[", 
+   RowBox[{"gr123", ",", "gr12", ",", "1", ",", "gr3"}], "]"}], 
+  ";"}]}], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"SubalgHeightA1", "[", 
+   RowBox[{"grh", ",", 
+    RowBox[{"{", 
+     RowBox[{"1", ",", "6"}], "}"}]}], "]"}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"DownValues", "[", "gr123", "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"DownValues", "[", "grh", "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"gr123", "[", "\"\<submats\>\"", "]"}], "===", " ", 
+  RowBox[{"grh", "[", "\"\<submats\>\"", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+  "G2A1", " ", "makes", " ", "the", " ", "height", " ", "subalgebra", " ", 
+   "of", " ", 
+   RowBox[{"G2", ":"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"SubalgHeightA1", "[", 
+   RowBox[{"grgh", ",", 
+    RowBox[{"{", 
+     RowBox[{"7", ",", "2"}], "}"}]}], "]"}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"DownValues", "[", "gr3", "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"DownValues", "[", "grgh", "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"gr3", "[", "\"\<submats\>\"", "]"}], "===", " ", 
+  RowBox[{"grgh", "[", "\"\<submats\>\"", "]"}]}]], "Input"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Graphs of Root Locations", "Subsection"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", "Setup", " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"showgfx", "[", "gfx_", "]"}], " ", ":=", " ", 
+  RowBox[{"Framed", "[", 
+   RowBox[{
+    RowBox[{"Graphics", "[", 
+     RowBox[{"gfx", ",", 
+      RowBox[{"ImageSize", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"{", 
+         RowBox[{"160", ",", "160"}], "}"}], "}"}]}]}], "]"}], ",", 
+    RowBox[{"FrameMargins", "\[Rule]", "24"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SU", 
+    RowBox[{
+     RowBox[{"(", "3", ")"}], " ", "/", " ", "A"}], 
+    RowBox[{"(", "2", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fundamental", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0"}], ")"}], " ", "3"}], " ", "-", " ", 
+   RowBox[{"red", "\[IndentingNewLine]", "Fund", " ", "mirror", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1"}], ")"}], " ", "3", "*", " ", 
+    RowBox[{"-", " ", "cyan"}]}], "-", 
+   RowBox[{"blue", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "1"}], ")"}], " ", "8"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "\[IndentingNewLine]", "G", 
+    RowBox[{"(", "2", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fundamental", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1"}], ")"}], " ", "7"}], " ", "-", " ", 
+   RowBox[{"yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0"}], ")"}], " ", "14"}], " ", "-", " ", "black"}], 
+  "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"showgfx", "[", 
+    RowBox[{"Rotate", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"PointSize", "[", "Large", "]"}], ",", "Red", ",", 
+        RowBox[{"Graph2DRoots", "[", 
+         RowBox[{"1", ",", 
+          RowBox[{"{", 
+           RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+        RowBox[{"Blend", "[", 
+         RowBox[{"{", 
+          RowBox[{"Blue", ",", "Cyan"}], "}"}], "]"}], ",", 
+        RowBox[{"Graph2DRoots", "[", 
+         RowBox[{"1", ",", 
+          RowBox[{"{", 
+           RowBox[{"0", ",", "1"}], "}"}]}], "]"}], ",", "Black", ",", 
+        RowBox[{"Graph2DRoots", "[", 
+         RowBox[{"1", ",", 
+          RowBox[{"{", 
+           RowBox[{"1", ",", "1"}], "}"}]}], "]"}]}], "}"}], ",", 
+      RowBox[{"90", " ", "Degree"}]}], "]"}], "]"}], ",", 
+   RowBox[{"showgfx", "[", 
+    RowBox[{"Rotate", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+        RowBox[{"Graph2DRoots", "[", 
+         RowBox[{"7", ",", 
+          RowBox[{"{", 
+           RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+        RowBox[{"PointSize", "[", "Medium", "]"}], ",", "Yellow", ",", 
+        RowBox[{"Graph2DRoots", "[", 
+         RowBox[{"7", ",", 
+          RowBox[{"{", 
+           RowBox[{"0", ",", "1"}], "}"}]}], "]"}]}], "}"}], ",", 
+      RowBox[{"90", " ", "Degree"}]}], "]"}], "]"}]}], "}"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SO", 
+    RowBox[{
+     RowBox[{"(", "4", ")"}], " ", "/", " ", "D"}], 
+    RowBox[{
+     RowBox[{"(", "2", ")"}], " ", "/", " ", "SU"}], 
+    RowBox[{"(", "2", ")"}], "*", "SU", 
+    RowBox[{
+     RowBox[{"(", "2", ")"}], " ", "/", " ", "A"}], 
+    RowBox[{"(", "1", ")"}], "*", "A", 
+    RowBox[{"(", "1", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Spinor", " ", "1", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0"}], ")"}]}], " ", "-", " ", 
+   RowBox[{"red", "\[IndentingNewLine]", "Spinor", " ", "2", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1"}], ")"}]}], " ", "-", " ", "cyan", "-", 
+   RowBox[{"blue", "\[IndentingNewLine]", "Vector", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "1"}], ")"}]}], " ", "-", " ", 
+   RowBox[{"dark", " ", "yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"2", ",", "0"}], ")"}]}], " ", "+", " ", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"0", ",", "2"}], ")"}], " ", "6"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "\[IndentingNewLine]", "SO", 
+    RowBox[{
+     RowBox[{"(", "5", ")"}], " ", "/", " ", "B"}], 
+    RowBox[{
+     RowBox[{"(", "2", ")"}], " ", "/", " ", "Sp"}], 
+    RowBox[{
+     RowBox[{"(", "4", ")"}], " ", "/", " ", "C"}], 
+    RowBox[{"(", "2", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Vector", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0"}], ")"}], " ", "5"}], " ", "-", " ", 
+   RowBox[{"yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "2"}], ")"}], " ", "10"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "Spinor", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1"}], ")"}], " ", "4", " ", "red", " ", 
+    RowBox[{"(", 
+     RowBox[{
+     "does", " ", "not", " ", "overlap", " ", "the", " ", "other", " ", 
+      "two"}], ")"}]}]}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"4", ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "0"}], "}"}]}], "]"}], ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"4", ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "2"}], "}"}]}], "]"}], ",", "Red", ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"4", ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Yellow", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"4", ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "1"}], "}"}]}], "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Cyan", ",", "Blue"}], "}"}], "]"}], ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"4", ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1"}], "}"}]}], "]"}]}], "}"}], "]"}], ",", 
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"2", ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "2"}], "}"}]}], "]"}], ",", 
+      RowBox[{"PointSize", "[", "Medium", "]"}], ",", "Yellow", ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"2", ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0"}], "}"}]}], "]"}], ",", 
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Green", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"Graph2DRoots", "[", 
+       RowBox[{"2", ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1"}], "}"}]}], "]"}]}], "}"}], "]"}]}], 
+  "}"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Projected", " ", "3", 
+   RowBox[{"D", " ", "--"}], " ", "the", " ", "third", " ", "dimension", " ", 
+   "is", " ", "a", " ", "short", " ", "diagonal", " ", "line"}], " ", 
+  "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"gfxprj3d", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"1", "/", "10"}], ",", 
+       RowBox[{"1", "/", "10"}]}], "}"}]}], "}"}]}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SU", 
+    RowBox[{
+     RowBox[{"(", "4", ")"}], " ", "/", " ", "A"}], 
+    RowBox[{
+     RowBox[{"(", "3", ")"}], " ", "/", " ", "SO"}], 
+    RowBox[{
+     RowBox[{"(", "6", ")"}], " ", "/", " ", "D"}], 
+    RowBox[{"(", "3", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0"}], ")"}], " ", "4"}], " ", "-", " ", 
+   RowBox[{"red", "\[IndentingNewLine]", "Fund", " ", "Conjg", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "1"}], ")"}], " ", "4"}], " ", "-", " ", 
+   "cyan", "-", 
+   RowBox[{"blue", "\[IndentingNewLine]", "Middle", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "0"}], ")"}], " ", "5"}], " ", "-", " ", 
+   RowBox[{"dark", " ", "yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "1"}], ")"}], " ", "15"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "\[IndentingNewLine]", "Sp", 
+    RowBox[{
+     RowBox[{"(", "6", ")"}], " ", "/", " ", "C"}], 
+    RowBox[{"(", "3", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0"}], ")"}], " ", "6"}], " ", "-", " ", 
+   RowBox[{"green", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"2", ",", "0", ",", "0"}], ")"}], " ", "21"}], " ", "-", " ", 
+   "black"}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "1"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", "Red", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Blue", ",", "Cyan"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "1"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Yellow", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}]}],
+      "}"}], "]"}], ",", 
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"3", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "0", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Green", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"3", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}]}],
+      "}"}], "]"}]}], "}"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SO", 
+    RowBox[{
+     RowBox[{"(", "6", ")"}], " ", "/", " ", "D"}], 
+    RowBox[{
+     RowBox[{"(", "3", ")"}], " ", "/", " ", "SU"}], 
+    RowBox[{
+     RowBox[{"(", "4", ")"}], " ", "/", " ", "A"}], 
+    RowBox[{"(", "3", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Vector", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0"}], ")"}], " ", "5"}], " ", "-", " ", 
+   RowBox[{"dark", " ", "yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "1"}], ")"}], " ", "15"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "Spinor", " ", "1", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "0"}], ")"}], " ", "4"}], " ", "-", " ", 
+   RowBox[{"red", "\[IndentingNewLine]", "Spinor", " ", "2", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "1"}], ")"}], " ", "4"}], " ", "-", " ", 
+   "cyan", "-", 
+   RowBox[{"blue", "\[IndentingNewLine]", "\[IndentingNewLine]", "SO", 
+    RowBox[{
+     RowBox[{"(", "7", ")"}], " ", "/", " ", "B"}], 
+    RowBox[{"(", "3", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Vector", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0"}], ")"}], " ", "6"}], " ", "-", " ", 
+   RowBox[{"yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "0"}], ")"}], " ", "15"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "Spinor", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "1"}], ")"}], " ", "8"}], " ", "-", " ", 
+   "green"}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "1"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Yellow", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Red", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Blue", ",", "Cyan"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "1"}], "}"}], ",", "gfxprj3d"}], "]"}]}],
+      "}"}], "]"}], ",", 
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"2", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"PointSize", "[", "Medium", "]"}], ",", "Yellow", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"2", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0"}], "}"}], ",", "gfxprj3d"}], "]"}], 
+      ",", 
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Green", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"2", ",", "3"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "1"}], "}"}], ",", "gfxprj3d"}], "]"}]}],
+      "}"}], "]"}]}], "}"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Projected", " ", "4", 
+   RowBox[{"D", " ", "--"}], " ", "the", " ", "third", " ", "and", " ", 
+   "fourth", " ", "dimensions", " ", "are", " ", "short", " ", "lines", " ", 
+   "parallel", " ", "to", " ", "the", " ", "two", " ", "axes"}], " ", 
+  "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"gfxprj4d", " ", "=", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"1", ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", "1"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"1", "/", "8"}], ",", "0"}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"0", ",", 
+       RowBox[{"1", "/", "8"}]}], "}"}]}], "}"}]}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SU", 
+    RowBox[{
+     RowBox[{"(", "5", ")"}], " ", "/", " ", "A"}], 
+    RowBox[{"(", "4", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "5"}], " ", "-",
+    " ", 
+   RowBox[{"red", "\[IndentingNewLine]", "Fund", " ", "Conjg", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "0", ",", "1"}], ")"}], " ", "5"}], " ", "-",
+    " ", "cyan", "-", 
+   RowBox[{"blue", "\[IndentingNewLine]", "AS", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "0", ",", "0"}], ")"}], " ", "10"}], " ", 
+   "-", " ", 
+   RowBox[{"orange", "\[IndentingNewLine]", "AS", " ", "Conjg", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "1", ",", "0"}], ")"}], " ", "10"}], " ", 
+   "-", " ", 
+   RowBox[{"purple", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "1"}], ")"}], " ", "24"}], " ", "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "\[IndentingNewLine]", "Sp", 
+    RowBox[{
+     RowBox[{"(", "8", ")"}], " ", "/", " ", "C"}], 
+    RowBox[{"(", "4", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "6"}], " ", "-",
+    " ", 
+   RowBox[{"green", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"2", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "21"}], " ", 
+   "-", " ", "black"}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", "Red", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Blue", ",", "Cyan"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", "Orange", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", "Purple", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"1", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}]}], "}"}], "]"}], ",", 
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"3", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"2", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Green", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"3", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}]}], "}"}], "]"}]}], "}"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"SO", 
+    RowBox[{
+     RowBox[{"(", "8", ")"}], " ", "/", " ", "D"}], 
+    RowBox[{"(", "4", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "8"}], " ", "-",
+    " ", 
+   RowBox[{"red", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "0", ",", "0"}], ")"}], " ", "28"}], " ", 
+   "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "Spinor", " ", "1", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "1", ",", "0"}], ")"}], " ", "8"}], " ", "-",
+    " ", 
+   RowBox[{
+   "dark", " ", "yellow", "\[IndentingNewLine]", "Spinor", " ", "2", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "0", ",", "1"}], ")"}], " ", "8"}], " ", "-",
+    " ", "cyan", "-", 
+   RowBox[{"blue", "\[IndentingNewLine]", "\[IndentingNewLine]", "SO", 
+    RowBox[{
+     RowBox[{"(", "9", ")"}], " ", "/", " ", "B"}], 
+    RowBox[{"(", "4", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "9"}], " ", "-",
+    " ", 
+   RowBox[{"yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "1", ",", "0", ",", "0"}], ")"}], " ", "36"}], " ", 
+   "-", " ", 
+   RowBox[{"black", "\[IndentingNewLine]", "Spinor", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "0", ",", "1"}], ")"}], " ", "16"}], " ", 
+   "-", " ", "green"}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Yellow", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Red", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "1", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Blue", ",", "Cyan"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"4", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}]}], "}"}], "]"}], ",", 
+   RowBox[{"showgfx", "[", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"2", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "1", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"PointSize", "[", "Medium", "]"}], ",", "Yellow", ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"2", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}], ",", 
+      RowBox[{"PointSize", "[", "Large", "]"}], ",", 
+      RowBox[{"Blend", "[", 
+       RowBox[{"{", 
+        RowBox[{"Green", ",", "Black"}], "}"}], "]"}], ",", 
+      RowBox[{"GraphProjRoots", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"2", ",", "4"}], "}"}], ",", 
+        RowBox[{"{", 
+         RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", 
+        "gfxprj4d"}], "]"}]}], "}"}], "]"}]}], "}"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"F", 
+    RowBox[{"(", "4", ")"}], "\[IndentingNewLine]", "\[IndentingNewLine]", 
+    "Fund", " ", 
+    RowBox[{"(", 
+     RowBox[{"0", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "26"}], " ", 
+   "-", " ", 
+   RowBox[{"dark", " ", "yellow", "\[IndentingNewLine]", "Adjoint", " ", 
+    RowBox[{"(", 
+     RowBox[{"1", ",", "0", ",", "0", ",", "0"}], ")"}], " ", "52"}], " ", 
+   "-", " ", "black"}], "\[IndentingNewLine]", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"showgfx", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"PointSize", "[", "Large", "]"}], ",", "Black", ",", 
+    RowBox[{"GraphProjRoots", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"6", ",", "4"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"1", ",", "0", ",", "0", ",", "0"}], "}"}], ",", "gfxprj4d"}], 
+     "]"}], ",", 
+    RowBox[{"PointSize", "[", "Medium", "]"}], ",", "Yellow", ",", 
+    RowBox[{"GraphProjRoots", "[", 
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"6", ",", "4"}], "}"}], ",", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0", ",", "0", ",", "1"}], "}"}], ",", "gfxprj4d"}], 
+     "]"}]}], "}"}], "]"}]], "Input"]
+}, Closed]]
+}, Closed]]
+},
+WindowSize->{637, 696},
+WindowMargins->{{308, Automatic}, {Automatic, 46}},
+ShowSelection->True,
+FrontEndVersion->"11.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (September \
+21, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[567, 22, 31, 0, 64, "Section"],
+Cell[601, 24, 3768, 79, 1455, "Text"],
+Cell[CellGroupData[{
+Cell[4394, 107, 27, 0, 44, "Subsection"],
+Cell[4424, 109, 1071, 26, 148, "Input"],
+Cell[5498, 137, 418, 12, 46, "Input"],
+Cell[5919, 151, 404, 11, 63, "Input"],
+Cell[6326, 164, 289, 8, 46, "Input"],
+Cell[6618, 174, 513, 13, 63, "Input"],
+Cell[7134, 189, 608, 15, 63, "Input"]
+}, Closed]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7791, 210, 38, 0, 64, "Section"],
+Cell[CellGroupData[{
+Cell[7854, 214, 61, 0, 44, "Subsection"],
+Cell[7918, 216, 391, 12, 46, "Input"],
+Cell[8312, 230, 1503, 41, 131, "Input"],
+Cell[9818, 273, 364, 11, 46, "Input"],
+Cell[10185, 286, 431, 11, 46, "Input"],
+Cell[10619, 299, 174, 4, 28, "Input"],
+Cell[10796, 305, 480, 15, 46, "Input"],
+Cell[11279, 322, 173, 4, 28, "Input"],
+Cell[11455, 328, 480, 15, 46, "Input"],
+Cell[11938, 345, 417, 13, 46, "Input"],
+Cell[12358, 360, 173, 4, 28, "Input"],
+Cell[12534, 366, 149, 3, 28, "Input"],
+Cell[12686, 371, 288, 9, 28, "Input"],
+Cell[12977, 382, 171, 4, 28, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[13185, 391, 71, 0, 36, "Subsection"],
+Cell[13259, 393, 554, 17, 63, "Input"],
+Cell[13816, 412, 1718, 47, 131, "Input"],
+Cell[15537, 461, 201, 5, 28, "Input"],
+Cell[15741, 468, 159, 4, 28, "Input"],
+Cell[15903, 474, 267, 6, 46, "Input"],
+Cell[16173, 482, 570, 16, 63, "Input"],
+Cell[16746, 500, 462, 14, 46, "Input"],
+Cell[17211, 516, 738, 19, 97, "Input"],
+Cell[17952, 537, 549, 15, 63, "Input"],
+Cell[18504, 554, 587, 17, 63, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[19128, 576, 67, 0, 36, "Subsection"],
+Cell[19198, 578, 388, 11, 46, "Input"],
+Cell[19589, 591, 1254, 32, 114, "Input"],
+Cell[20846, 625, 158, 4, 28, "Input"],
+Cell[21007, 631, 644, 15, 165, "Input"],
+Cell[21654, 648, 509, 13, 63, "Input"],
+Cell[22166, 663, 556, 16, 63, "Input"],
+Cell[22725, 681, 1085, 26, 131, "Input"],
+Cell[23813, 709, 523, 15, 63, "Input"],
+Cell[24339, 726, 584, 16, 63, "Input"],
+Cell[24926, 744, 684, 19, 80, "Input"],
+Cell[25613, 765, 744, 20, 80, "Input"],
+Cell[26360, 787, 974, 27, 97, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[27371, 819, 67, 0, 36, "Subsection"],
+Cell[27441, 821, 422, 13, 46, "Input"],
+Cell[27866, 836, 1151, 29, 97, "Input"],
+Cell[29020, 867, 158, 4, 28, "Input"],
+Cell[29181, 873, 529, 12, 131, "Input"],
+Cell[29713, 887, 546, 14, 63, "Input"],
+Cell[30262, 903, 596, 17, 63, "Input"],
+Cell[30861, 922, 556, 16, 63, "Input"],
+Cell[31420, 940, 539, 15, 46, "Input"],
+Cell[31962, 957, 161, 4, 28, "Input"],
+Cell[32126, 963, 384, 11, 46, "Input"],
+Cell[32513, 976, 369, 10, 46, "Input"],
+Cell[32885, 988, 456, 13, 46, "Input"],
+Cell[33344, 1003, 511, 14, 63, "Input"],
+Cell[33858, 1019, 553, 17, 63, "Input"],
+Cell[34414, 1038, 492, 14, 46, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[34943, 1057, 45, 0, 36, "Subsection"],
+Cell[34991, 1059, 277, 8, 46, "Input"],
+Cell[35271, 1069, 1349, 32, 114, "Input"],
+Cell[36623, 1103, 160, 4, 28, "Input"],
+Cell[36786, 1109, 644, 15, 165, "Input"],
+Cell[37433, 1126, 520, 13, 63, "Input"],
+Cell[37956, 1141, 577, 16, 63, "Input"],
+Cell[38536, 1159, 504, 13, 63, "Input"],
+Cell[39043, 1174, 502, 14, 46, "Input"],
+Cell[39548, 1190, 518, 15, 63, "Input"],
+Cell[40069, 1207, 541, 14, 63, "Input"],
+Cell[40613, 1223, 607, 15, 63, "Input"],
+Cell[41223, 1240, 703, 19, 80, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[41963, 1264, 45, 0, 36, "Subsection"],
+Cell[42011, 1266, 286, 9, 46, "Input"],
+Cell[42300, 1277, 1224, 29, 97, "Input"],
+Cell[43527, 1308, 160, 4, 28, "Input"],
+Cell[43690, 1314, 529, 12, 131, "Input"],
+Cell[44222, 1328, 557, 14, 63, "Input"],
+Cell[44782, 1344, 617, 17, 63, "Input"],
+Cell[45402, 1363, 577, 16, 63, "Input"],
+Cell[45982, 1381, 543, 15, 46, "Input"],
+Cell[46528, 1398, 163, 4, 28, "Input"],
+Cell[46694, 1404, 396, 11, 46, "Input"],
+Cell[47093, 1417, 381, 10, 46, "Input"],
+Cell[47477, 1429, 468, 13, 46, "Input"],
+Cell[47948, 1444, 523, 14, 63, "Input"],
+Cell[48474, 1460, 565, 17, 63, "Input"],
+Cell[49042, 1479, 504, 14, 46, "Input"]
+}, Closed]]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[49595, 1499, 44, 0, 50, "Section"],
+Cell[CellGroupData[{
+Cell[49664, 1503, 79, 0, 44, "Subsection"],
+Cell[49746, 1505, 417, 11, 63, "Input"],
+Cell[50166, 1518, 1561, 39, 165, "Input"],
+Cell[51730, 1559, 146, 3, 28, "Input"],
+Cell[51879, 1564, 162, 4, 28, "Input"],
+Cell[52044, 1570, 574, 18, 46, "Input"],
+Cell[52621, 1590, 736, 22, 63, "Input"],
+Cell[53360, 1614, 748, 22, 63, "Input"],
+Cell[54111, 1638, 131, 4, 28, "Input"],
+Cell[54245, 1644, 1046, 22, 148, "Input"],
+Cell[55294, 1668, 348, 10, 46, "Input"],
+Cell[55645, 1680, 742, 17, 97, "Input"],
+Cell[56390, 1699, 458, 13, 46, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[56885, 1717, 94, 2, 61, "Subsection"],
+Cell[56982, 1721, 891, 25, 97, "Input"],
+Cell[57876, 1748, 688, 22, 97, "Input"],
+Cell[58567, 1772, 726, 23, 97, "Input"],
+Cell[59296, 1797, 1276, 35, 131, "Input"],
+Cell[60575, 1834, 1002, 32, 131, "Input"],
+Cell[61580, 1868, 1005, 32, 131, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[62622, 1905, 43, 0, 36, "Subsection"],
+Cell[62668, 1907, 6283, 177, 420, "Input"],
+Cell[68954, 2086, 851, 22, 63, "Input"],
+Cell[69808, 2110, 160, 4, 28, "Input"],
+Cell[69971, 2116, 908, 27, 114, "Input"],
+Cell[70882, 2145, 868, 23, 114, "Input"],
+Cell[71753, 2170, 537, 15, 63, "Input"],
+Cell[72293, 2187, 523, 14, 63, "Input"],
+Cell[72819, 2203, 880, 23, 114, "Input"],
+Cell[73702, 2228, 587, 16, 63, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[74326, 2249, 55, 0, 36, "Subsection"],
+Cell[74384, 2251, 2020, 51, 216, "Input"],
+Cell[76407, 2304, 802, 21, 63, "Input"],
+Cell[77212, 2327, 160, 4, 28, "Input"],
+Cell[77375, 2333, 318, 9, 28, "Input"],
+Cell[77696, 2344, 953, 29, 63, "Input"],
+Cell[78652, 2375, 1043, 31, 80, "Input"],
+Cell[79698, 2408, 1504, 40, 131, "Input"],
+Cell[81205, 2450, 570, 17, 63, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[81812, 2472, 46, 0, 36, "Subsection"],
+Cell[81861, 2474, 1493, 42, 131, "Input"],
+Cell[83357, 2518, 873, 21, 80, "Input"],
+Cell[84233, 2541, 162, 4, 28, "Input"],
+Cell[84398, 2547, 510, 13, 63, "Input"],
+Cell[84911, 2562, 610, 15, 63, "Input"],
+Cell[85524, 2579, 636, 16, 63, "Input"],
+Cell[86163, 2597, 759, 19, 80, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[86959, 2621, 42, 0, 36, "Subsection"],
+Cell[87004, 2623, 784, 20, 80, "Input"],
+Cell[87791, 2645, 774, 19, 63, "Input"],
+Cell[88568, 2666, 729, 20, 63, "Input"],
+Cell[89300, 2688, 728, 20, 63, "Input"],
+Cell[90031, 2710, 1010, 26, 80, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[91078, 2741, 36, 0, 36, "Subsection"],
+Cell[91117, 2743, 538, 14, 63, "Input"],
+Cell[91658, 2759, 824, 22, 80, "Input"],
+Cell[92485, 2783, 158, 4, 28, "Input"],
+Cell[92646, 2789, 457, 11, 63, "Input"],
+Cell[93106, 2802, 211, 5, 28, "Input"],
+Cell[93320, 2809, 718, 20, 63, "Input"],
+Cell[94041, 2831, 701, 19, 63, "Input"],
+Cell[94745, 2852, 541, 13, 63, "Input"],
+Cell[95289, 2867, 866, 21, 80, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[96192, 2893, 43, 0, 36, "Subsection"],
+Cell[96238, 2895, 981, 24, 114, "Input"],
+Cell[97222, 2921, 330, 7, 46, "Input"],
+Cell[97555, 2930, 658, 19, 46, "Input"],
+Cell[98216, 2951, 689, 20, 46, "Input"],
+Cell[98908, 2973, 915, 26, 63, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[99860, 3004, 35, 0, 36, "Subsection"],
+Cell[99898, 3006, 340, 9, 46, "Input"],
+Cell[100241, 3017, 697, 15, 80, "Input"],
+Cell[100941, 3034, 507, 15, 46, "Input"],
+Cell[101451, 3051, 536, 15, 46, "Input"],
+Cell[101990, 3068, 643, 18, 46, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[102670, 3091, 33, 0, 36, "Subsection"],
+Cell[102706, 3093, 530, 14, 63, "Input"],
+Cell[103239, 3109, 844, 24, 97, "Input"],
+Cell[104086, 3135, 439, 11, 63, "Input"],
+Cell[104528, 3148, 622, 19, 63, "Input"],
+Cell[105153, 3169, 477, 13, 63, "Input"],
+Cell[105633, 3184, 696, 21, 63, "Input"],
+Cell[106332, 3207, 175, 4, 28, "Input"],
+Cell[106510, 3213, 242, 6, 46, "Input"],
+Cell[106755, 3221, 795, 24, 63, "Input"]
+}, Closed]]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[107599, 3251, 43, 0, 50, "Section"],
+Cell[CellGroupData[{
+Cell[107667, 3255, 40, 0, 44, "Subsection"],
+Cell[107710, 3257, 1583, 42, 148, "Input"],
+Cell[109296, 3301, 502, 16, 63, "Input"],
+Cell[109801, 3319, 518, 16, 63, "Input"],
+Cell[110322, 3337, 547, 17, 63, "Input"],
+Cell[110872, 3356, 318, 7, 46, "Input"],
+Cell[111193, 3365, 197, 5, 28, "Input"],
+Cell[111393, 3372, 756, 18, 131, "Input"],
+Cell[112152, 3392, 764, 18, 131, "Input"],
+Cell[112919, 3412, 695, 17, 114, "Input"],
+Cell[113617, 3431, 224, 5, 28, "Input"],
+Cell[113844, 3438, 301, 8, 46, "Input"],
+Cell[114148, 3448, 234, 6, 28, "Input"],
+Cell[114385, 3456, 228, 6, 28, "Input"],
+Cell[114616, 3464, 302, 8, 46, "Input"],
+Cell[114921, 3474, 234, 6, 28, "Input"],
+Cell[115158, 3482, 228, 6, 28, "Input"],
+Cell[115389, 3490, 189, 5, 28, "Input"],
+Cell[115581, 3497, 223, 6, 28, "Input"],
+Cell[115807, 3505, 228, 6, 28, "Input"],
+Cell[116038, 3513, 293, 7, 46, "Input"],
+Cell[116334, 3522, 240, 6, 46, "Input"],
+Cell[116577, 3530, 228, 6, 28, "Input"],
+Cell[116808, 3538, 296, 7, 46, "Input"],
+Cell[117107, 3547, 240, 6, 46, "Input"],
+Cell[117350, 3555, 228, 6, 28, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[117615, 3566, 43, 0, 36, "Subsection"],
+Cell[117661, 3568, 1151, 30, 131, "Input"],
+Cell[118815, 3600, 518, 13, 63, "Input"],
+Cell[119336, 3615, 162, 5, 28, "Input"],
+Cell[119501, 3622, 67, 1, 28, "Input"],
+Cell[119571, 3625, 65, 1, 28, "Input"],
+Cell[119639, 3628, 146, 3, 28, "Input"],
+Cell[119788, 3633, 185, 5, 28, "Input"],
+Cell[119976, 3640, 163, 5, 28, "Input"],
+Cell[120142, 3647, 65, 1, 28, "Input"],
+Cell[120210, 3650, 66, 1, 28, "Input"],
+Cell[120279, 3653, 145, 3, 28, "Input"]
+}, Closed]],
+Cell[CellGroupData[{
+Cell[120461, 3661, 46, 0, 36, "Subsection"],
+Cell[120510, 3663, 65, 1, 28, "Input"],
+Cell[120578, 3666, 394, 11, 46, "Input"],
+Cell[120975, 3679, 1114, 25, 216, "Input"],
+Cell[122092, 3706, 1479, 40, 148, "Input"],
+Cell[123574, 3748, 1976, 48, 250, "Input"],
+Cell[125553, 3798, 1931, 54, 148, "Input"],
+Cell[127487, 3854, 238, 5, 46, "Input"],
+Cell[127728, 3861, 360, 12, 28, "Input"],
+Cell[128091, 3875, 1500, 34, 233, "Input"],
+Cell[129594, 3911, 2092, 61, 182, "Input"],
+Cell[131689, 3974, 1665, 37, 250, "Input"],
+Cell[133357, 4013, 2505, 71, 216, "Input"],
+Cell[135865, 4086, 310, 6, 46, "Input"],
+Cell[136178, 4094, 421, 14, 28, "Input"],
+Cell[136602, 4110, 1591, 37, 250, "Input"],
+Cell[138196, 4149, 2331, 65, 199, "Input"],
+Cell[140530, 4216, 1623, 39, 250, "Input"],
+Cell[142156, 4257, 2591, 71, 250, "Input"],
+Cell[144750, 4330, 515, 12, 114, "Input"],
+Cell[145268, 4344, 685, 19, 80, "Input"]
+}, Closed]]
+}, Closed]]
+}
+]
+*)
+
