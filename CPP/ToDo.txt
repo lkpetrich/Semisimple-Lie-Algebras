@@ -1,0 +1,1 @@
+Young-diagram manipulations? Product reps, plethysms, etc.
