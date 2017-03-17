@@ -1,0 +1,637 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     16958,        629]
+NotebookOptionsPosition[     15191,        576]
+NotebookOutlinePosition[     15550,        592]
+CellTagsIndexPosition[     15507,        589]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["\<\
+Lie-Algebra Metrics: Analytic Continuations of the Compact Real Algebras
+
+LAMet[\[OpenCurlyDoubleQuote]name\[CloseCurlyDoubleQuote],parameters] -- the \
+parameters are either n or n1,n2
+Returns # -, # + in metric
+
+Compact: metric has signature all - no +
+
+Compact: Cartan-Weyl basis
+H, E(+), E(-)
+E(+) = Ex + i*Ey
+E(-) = Ex - i*Ey
+
+Split: Cartan-Weyl basis with
+Ex -> i*Ex, Ey -> Ey, H-> i*H
+
+Easy to see for SU(n) -> SL(n,R)
+
+# raise or lower = ldr
+Metric signature: # - = ldr, # + = rank + ldr
+
+Splitting is possible for all semisimple Lie algebras
+
+SU(n) Compact
+SU(n1,n2)
+SL(n,R) Split
+SL(n,C) Complex
+SL(n,H)
+
+SO(n) Compact
+SO(n1,n2)
+SO(n,H)
+
+Split ones: SO(n,n), SO(n+1,n) -- Spin(n,n), Spin(n+1,n) are both real
+
+Sp(2n) Compact
+Sp(2n1,2n2)
+Sp(2n,R) Split
+
+Number in ()\[CloseCurlyQuote]s is the trace of the metric, (# +) - (# -)\
+\[LineSeparator]Compact: - (number of generators) (note the minus sign)
+
+G2(-14) Compact
+G2(2) Split
+
+F4(-52) Compact
+F4(4) Split
+F4(-20)
+
+E6(-78) Compact
+E6(6) Split
+E6(2)
+E6(-14)
+E6(-26)
+
+E7(-133) Compact
+E7(7) Split
+E7(-5)
+E7(-25)
+
+E8(-248) Compact
+E8(8) Split
+E8(-24)
+
+List of simple Lie groups - Wikipedia, the free encyclopedia - \
+https://en.wikipedia.org/wiki/List_of_simple_Lie_groups
+
+Output: {(# -), (# +)}\
+\>", "Text"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Classical", "-", 
+   RowBox[{"group", " ", "variants"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SU(n)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"n", "^", "2"}], "-", "1"}], ",", "0"}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SU(n1,n2)\>\"", ",", "n1_", ",", "n2_"}], "]"}], " ", ":=", 
+  " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"n1", "^", "2"}], "+", 
+     RowBox[{"n2", "^", "2"}], "-", "1"}], ",", 
+    RowBox[{"2", "n1", "*", "n2"}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SL(n,R)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "/", "2"}], ")"}], "n", 
+     RowBox[{"(", 
+      RowBox[{"n", "-", "1"}], ")"}]}], ",", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "/", "2"}], ")"}], 
+     RowBox[{"(", 
+      RowBox[{"n", "-", "1"}], ")"}], 
+     RowBox[{"(", 
+      RowBox[{"n", "+", "2"}], ")"}]}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SL(n,C)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"n", "^", "2"}], "-", "1"}], ",", 
+    RowBox[{
+     RowBox[{"n", "^", "2"}], "-", "1"}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SL(n,H)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"n", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"2", "n"}], "+", "1"}], ")"}]}], ",", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"n", "-", "1"}], ")"}], 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"2", "n"}], "+", "1"}], ")"}]}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SO(n)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "/", "2"}], ")"}], "n", 
+     RowBox[{"(", 
+      RowBox[{"n", "-", "1"}], ")"}]}], ",", "0"}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SO(n1,n2)\>\"", ",", "n1_", ",", "n2_"}], "]"}], " ", ":=", 
+  " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], "n1", 
+      RowBox[{"(", 
+       RowBox[{"n1", "-", "1"}], ")"}]}], "+", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], "n2", 
+      RowBox[{"(", 
+       RowBox[{"n2", "-", "1"}], ")"}]}]}], ",", 
+    RowBox[{"n1", "*", "n2"}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<SO(n,H)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"n", "^", "2"}], ",", 
+    RowBox[{"n", 
+     RowBox[{"(", 
+      RowBox[{"n", "-", "1"}], ")"}]}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<Sp(2n)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"n", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"2", "n"}], "+", "1"}], ")"}]}], ",", "0"}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<Sp(2n1,2n2)\>\"", ",", "n1_", ",", "n2_"}], "]"}], " ", ":=", 
+  " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"n1", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"2", "n1"}], "+", "1"}], ")"}]}], "+", 
+     RowBox[{"n2", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"2", "n2"}], "+", "1"}], ")"}]}]}], ",", 
+    RowBox[{"4", "n1", "*", "n2"}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LAMet", "[", 
+   RowBox[{"\"\<Sp(2n,R)\>\"", ",", "n_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"n", "^", "2"}], ",", 
+    RowBox[{"n", 
+     RowBox[{"(", 
+      RowBox[{"n", "+", "1"}], ")"}]}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Low", "-", 
+   RowBox[{"order", " ", "isomorphisms"}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n)\>\"", ",", "3"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SU(n)\>\"", ",", "2"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SL(n,H)\>\"", ",", "1"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<Sp(2n)\>\"", ",", "1"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "2", ",", "1"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SU(n1,n2)\>\"", ",", "1", ",", "1"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SL(n,R)\>\"", ",", "2"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<Sp(2n,R)\>\"", ",", "1"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n)\>\"", ",", "4"}], "]"}], ",", 
+    RowBox[{"2", 
+     RowBox[{"LAMet", "[", 
+      RowBox[{"\"\<SU(n)\>\"", ",", "2"}], "]"}]}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "3", ",", "1"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SL(n,C)\>\"", ",", "2"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "2", ",", "2"}], "]"}], ",", 
+    RowBox[{"2", 
+     RowBox[{"LAMet", "[", 
+      RowBox[{"\"\<SU(n1,n2)\>\"", ",", "1", ",", "1"}], "]"}]}]}], "}"}], 
+  "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n,H)\>\"", ",", "2"}], "]"}], ",", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"LAMet", "[", 
+       RowBox[{"\"\<SU(n)\>\"", ",", "2"}], "]"}], "+", 
+      RowBox[{"LAMet", "[", 
+       RowBox[{"\"\<SU(n1,n2)\>\"", ",", "1", ",", "1"}], "]"}]}], ")"}]}], 
+   "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n)\>\"", ",", "5"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<Sp(2n)\>\"", ",", "2"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "4", ",", "1"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<Sp(2n1,2n2)\>\"", ",", "1", ",", "1"}], "]"}]}], "}"}], 
+  "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "3", ",", "2"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<Sp(2n,R)\>\"", ",", "2"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n)\>\"", ",", "6"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SU(n)\>\"", ",", "4"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "5", ",", "1"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SL(n,H)\>\"", ",", "2"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "4", ",", "2"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SU(n1,n2)\>\"", ",", "2", ",", "2"}], "]"}]}], "}"}], 
+  "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n1,n2)\>\"", ",", "3", ",", "3"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SL(n,R)\>\"", ",", "4"}], "]"}]}], "}"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SO(n,H)\>\"", ",", "3"}], "]"}], ",", 
+    RowBox[{"LAMet", "[", 
+     RowBox[{"\"\<SU(n1,n2)\>\"", ",", "3", ",", "1"}], "]"}]}], "}"}], 
+  "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", "Crossovers", " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"LASplit", "[", 
+   RowBox[{"ngen_", ",", "rank_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"ngen", "-", "rank"}], ")"}], "/", "2"}], ",", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"ngen", "+", "rank"}], ")"}], "/", "2"}]}], "}"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SL(n,R)\>\"", ",", "n"}], "]"}], "-", 
+   RowBox[{"LASplit", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"n", "^", "2"}], "-", "1"}], ",", 
+     RowBox[{"n", "-", "1"}]}], "]"}]}], " ", "//", " ", "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<Sp(2n,R)\>\"", ",", "n"}], "]"}], "-", 
+   RowBox[{"LASplit", "[", 
+    RowBox[{
+     RowBox[{"n", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"2", "n"}], "+", "1"}], ")"}]}], ",", "n"}], "]"}]}], " ", "//",
+   " ", "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SL(n,R)\>\"", ",", "n"}], "]"}], " ", "-", " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SU(n1,n2)\>\"", ",", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], 
+      RowBox[{"(", 
+       RowBox[{"n", "+", 
+        RowBox[{"Sqrt", "[", 
+         RowBox[{"2", "-", "n"}], "]"}]}], ")"}]}], ",", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], 
+      RowBox[{"(", 
+       RowBox[{"n", "-", 
+        RowBox[{"Sqrt", "[", 
+         RowBox[{"2", "-", "n"}], "]"}]}], ")"}]}]}], "]"}]}], " ", "//", " ",
+   "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<Sp(2n,R)\>\"", ",", "n"}], "]"}], " ", "-", " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<Sp(2n1,2n2)\>\"", ",", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], 
+      RowBox[{"(", 
+       RowBox[{"n", "+", 
+        RowBox[{"Sqrt", "[", 
+         RowBox[{"-", "n"}], "]"}]}], ")"}]}], ",", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "2"}], ")"}], 
+      RowBox[{"(", 
+       RowBox[{"n", "-", 
+        RowBox[{"Sqrt", "[", 
+         RowBox[{"-", "n"}], "]"}]}], ")"}]}]}], "]"}]}], " ", "//", " ", 
+  "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LASplit", "[", 
+    RowBox[{
+     RowBox[{"n", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"2", "n"}], "-", "1"}], ")"}]}], ",", "n"}], "]"}], " ", "-", 
+   " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SO(n1,n2)\>\"", ",", "n", ",", "n"}], "]"}]}], " ", "//", 
+  " ", "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LASplit", "[", 
+    RowBox[{
+     RowBox[{"n", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"2", "n"}], "+", "1"}], ")"}]}], ",", "n"}], "]"}], " ", "-", 
+   " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SO(n1,n2)\>\"", ",", 
+     RowBox[{"n", "+", "1"}], ",", "n"}], "]"}]}], " ", "//", " ", 
+  "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SL(n,H)\>\"", ",", "n"}], "]"}], " ", "-", " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SU(n1,n2)\>\"", ",", 
+     RowBox[{"n", " ", "+", 
+      RowBox[{
+       RowBox[{"Sqrt", "[", 
+        RowBox[{"n", "+", "1"}], "]"}], "/", 
+       RowBox[{"Sqrt", "[", "2", "]"}]}]}], ",", 
+     RowBox[{"n", "-", 
+      RowBox[{
+       RowBox[{"Sqrt", "[", 
+        RowBox[{"n", "+", "1"}], "]"}], "/", 
+       RowBox[{"Sqrt", "[", "2", "]"}]}]}]}], "]"}]}], " ", "//", " ", 
+  "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SO(n,H)\>\"", ",", "n"}], "]"}], " ", "-", " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SO(n1,n2)\>\"", ",", 
+     RowBox[{"n", "+", 
+      RowBox[{"Sqrt", "[", "n", "]"}]}], ",", 
+     RowBox[{"n", "-", 
+      RowBox[{"Sqrt", "[", "n", "]"}]}]}], "]"}]}], " ", "//", " ", 
+  "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SL(n,H)\>\"", ",", 
+     RowBox[{
+      RowBox[{"2", 
+       RowBox[{"n", "^", "2"}]}], "-", "1"}]}], "]"}], " ", "-", " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SU(n1,n2)\>\"", ",", 
+     RowBox[{
+      RowBox[{"2", 
+       RowBox[{"n", "^", "2"}]}], "+", "n", "-", "1"}], ",", 
+     RowBox[{
+      RowBox[{"2", 
+       RowBox[{"n", "^", "2"}]}], "-", "n", "-", "1"}]}], "]"}]}], " ", "//", 
+  " ", "Expand"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SO(n,H)\>\"", ",", 
+     RowBox[{"n", "^", "2"}]}], "]"}], " ", "-", " ", 
+   RowBox[{"LAMet", "[", 
+    RowBox[{"\"\<SO(n1,n2)\>\"", ",", 
+     RowBox[{
+      RowBox[{"n", "^", "2"}], "+", "n"}], ",", 
+     RowBox[{
+      RowBox[{"n", "^", "2"}], "-", "n"}]}], "]"}]}], " ", "//", " ", 
+  "Expand"}]], "Input"]
+},
+WindowSize->{808, 685},
+WindowMargins->{{Automatic, -9}, {Automatic, 43}},
+FrontEndVersion->"11.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (September \
+21, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 1279, 69, 1284, "Text"],
+Cell[1840, 91, 127, 3, 32, "Input"],
+Cell[1970, 96, 227, 7, 32, "Input"],
+Cell[2200, 105, 317, 10, 32, "Input"],
+Cell[2520, 117, 493, 17, 32, "Input"],
+Cell[3016, 136, 280, 9, 32, "Input"],
+Cell[3299, 147, 423, 15, 32, "Input"],
+Cell[3725, 164, 307, 10, 32, "Input"],
+Cell[4035, 176, 524, 18, 32, "Input"],
+Cell[4562, 196, 276, 9, 32, "Input"],
+Cell[4841, 207, 273, 9, 32, "Input"],
+Cell[5117, 218, 459, 16, 32, "Input"],
+Cell[5579, 236, 277, 9, 32, "Input"],
+Cell[5859, 247, 125, 3, 32, "Input"],
+Cell[5987, 252, 416, 11, 32, "Input"],
+Cell[6406, 265, 446, 11, 54, "Input"],
+Cell[6855, 278, 271, 8, 32, "Input"],
+Cell[7129, 288, 265, 7, 32, "Input"],
+Cell[7397, 297, 302, 9, 32, "Input"],
+Cell[7702, 308, 400, 12, 32, "Input"],
+Cell[8105, 322, 250, 7, 32, "Input"],
+Cell[8358, 331, 282, 8, 32, "Input"],
+Cell[8643, 341, 266, 7, 32, "Input"],
+Cell[8912, 350, 249, 7, 32, "Input"],
+Cell[9164, 359, 265, 7, 32, "Input"],
+Cell[9432, 368, 280, 8, 32, "Input"],
+Cell[9715, 378, 265, 7, 32, "Input"],
+Cell[9983, 387, 268, 8, 32, "Input"],
+Cell[10254, 397, 70, 1, 32, "Input"],
+Cell[10327, 400, 341, 11, 32, "Input"],
+Cell[10671, 413, 299, 9, 32, "Input"],
+Cell[10973, 424, 324, 11, 32, "Input"],
+Cell[11300, 437, 653, 21, 54, "Input"],
+Cell[11956, 460, 646, 21, 54, "Input"],
+Cell[12605, 483, 349, 12, 32, "Input"],
+Cell[12957, 497, 375, 13, 32, "Input"],
+Cell[13335, 512, 570, 17, 54, "Input"],
+Cell[13908, 531, 379, 11, 32, "Input"],
+Cell[14290, 544, 505, 16, 54, "Input"],
+Cell[14798, 562, 389, 12, 32, "Input"]
+}
+]
+*)
+

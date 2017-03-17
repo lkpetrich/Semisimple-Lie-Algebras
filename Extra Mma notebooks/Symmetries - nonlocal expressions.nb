@@ -1,0 +1,652 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 11.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     20771,        644]
+NotebookOptionsPosition[     19675,        609]
+NotebookOutlinePosition[     20034,        625]
+CellTagsIndexPosition[     19991,        622]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["\<\
+Symmetries - nonlocal expressions
+
+
+Flat space with metric g:
+
+Translation:
+dx/dt = a -- a is a constant vector
+x\[CloseCurlyQuote] = x + at -- at = a*t
+
+Rotation:
+dx/dt = b.g.x -- b is a constant antisymmetric 2-tensor
+x\[CloseCurlyQuote] = R.x where R^T.g.R = g
+
+General expression for translation and rotation:
+x\[CloseCurlyQuote] = R.x + a
+
+Dilation:
+dx/dt = x
+ x\[CloseCurlyQuote] = exp(t)*x
+
+Skewing:
+dx/dt = (x.g.x)*a - 2(x.g.a)*x
+x\[CloseCurlyQuote] = (x + (x.g.x)*at)/(1 + 2(x.g.at) + (x.g.x)*(at.at)) -- \
+at = a*t
+
+
+Curved space with flat reference metric ge and curvature curv:
+g = ge + curv*dyad(ge.x,ge.x)/(1 - curv*(x.ge.x))
+inv(g) = inv(ge) - curv*dyad(x,x)
+
+Translation:
+dx/dt = sqrt(1 - curv*(x.ge.x)) * a
+x\[CloseCurlyQuote] = x + a * ( - (x.ge.a)/(a.ge.a) * (1 - \
+cos(t*sqrt(curv*(a.ge.a)))) + sqrt(1 - curv*(x.ge.x))/sqrt(curv*(a.ge.a) * \
+sin(t*sqrt(curv*(a.ge.a)))
+(analytic continuation)
+x\[CloseCurlyQuote] = x + a * ( (x.ge.a)/(a.ge.a) * \
+(cosh(t*sqrt(-curv*(a.ge.a)))-1) + sqrt(1 - \
+curv*(x.ge.x))/sqrt(-curv*(a.ge.a) * sinh(t*sqrt(-curv*(a.ge.a)))
+(boundary: a.ge.a = 0)
+x\[CloseCurlyQuote] = x + a* ( - curv*(x.ge.a) * t^2/2 + sqrt(1 - \
+curv*(x.ge.x)) * t)
+
+Rotation:
+dx/dt = b.g.x -- b is a constant antisymmetric 2-tensor
+x\[CloseCurlyQuote] = R.x where R^T.g.R = g
+
+General expression: 
+
+Rotation of vector {x} with sqrt(1 - curv*(x.ge.x))
+Rotation matrix keeps this metric fixed: {1, curv*ge}
+
+Dilation:
+dx/dt = sqrt(1 - curv*(x.ge.x)) * x
+x\[CloseCurlyQuote] = x/(cosh(t) + sqrt(1 - cv*(x.ge.x))*sinh(t))
+
+Skewing:
+dx/dt = a - curv*(x.ge.a)*x
+x\[CloseCurlyQuote] = (x + a * ((x.ge.a)/(a.ge.a) * \
+(cosh(t*sqrt(curv*(a.ge.a))) - 1) + 1/sqrt(curv*(a.ge.a)) * \
+sinh(t*sqrt(curv*(a.ge.a)))) / (cosh(t*sqrt(curv*(a.ge.a))) + \
+curv*(x.ge.a)/sqrt(curv*(a.ge.a)) * sinh(t*sqrt(curv*(a.ge.a))))
+(analytic continuation)
+x\[CloseCurlyQuote] = (x + a * (- (x.ge.a)/(a.ge.a) * (1 - \
+cos(t*sqrt(-curv*(a.ge.a)))) + 1/sqrt(-curv*(a.ge.a)) * \
+sin(t*sqrt(-curv*(a.ge.a)))) / (cos(t*sqrt(-curv*(a.ge.a))) + \
+curv*(x.ge.a)/sqrt(-curv*(a.ge.a)) * sin(t*sqrt(-curv*(a.ge.a))))
+(boundary: a.ge.a = 0)
+x\[CloseCurlyQuote] = (x + a * (- curv*(x.ge.a) * t^2/2 + t)/(1 + \
+curv*(x.ge.a)*t)
+
+
+Skewing = special conformal transforms\
+\>", "Text"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flatskew", "[", 
+   RowBox[{"x_", ",", "a_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"x", " ", "+", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"x", ".", "x"}], ")"}], "*", "a"}]}], ")"}], "/", 
+   RowBox[{"(", 
+    RowBox[{"1", " ", "+", " ", 
+     RowBox[{"2", 
+      RowBox[{"(", 
+       RowBox[{"x", ".", "a"}], ")"}]}], " ", "+", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"x", ".", "x"}], ")"}], "*", 
+      RowBox[{"(", 
+       RowBox[{"a", ".", "a"}], ")"}]}]}], ")"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flatskewtest", "[", 
+   RowBox[{"n_", ",", "x_", ",", "a_", ",", "t_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"xv", ",", "av", ",", "at", ",", "xt"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"xv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"x", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"av", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"a", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"at", " ", "=", " ", 
+      RowBox[{"av", "*", "t"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"xt", " ", "=", " ", 
+      RowBox[{"flatskew", "[", 
+       RowBox[{"xv", ",", "at"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"D", "[", 
+        RowBox[{"xt", ",", "t"}], "]"}], " ", "-", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"xt", ".", "xt"}], ")"}], "*", "av"}], " ", "-", " ", 
+         RowBox[{"2", 
+          RowBox[{"(", 
+           RowBox[{"xt", ".", "av"}], ")"}], "*", "xt"}]}], ")"}]}], " ", "//",
+       " ", "Factor"}]}]}], "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"flatskewtest", "[", 
+  RowBox[{"3", ",", "x", ",", "a", ",", "t"}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flatskewcmbntest", "[", 
+   RowBox[{"n_", ",", "x_", ",", "a_", ",", "b_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"xv", ",", "av", ",", "bv"}], "}"}], ",", "\[IndentingNewLine]", 
+    
+    RowBox[{
+     RowBox[{"xv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"x", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"av", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"a", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"bv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"b", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"flatskew", "[", 
+        RowBox[{
+         RowBox[{"flatskew", "[", 
+          RowBox[{"xv", ",", "av"}], "]"}], ",", "bv"}], "]"}], " ", "-", " ", 
+       RowBox[{"flatskew", "[", 
+        RowBox[{"xv", ",", 
+         RowBox[{"av", "+", "bv"}]}], "]"}]}], " ", "//", " ", "Factor"}]}]}],
+    "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"curvtrantest", "[", 
+   RowBox[{"x0_", ",", "a_", ",", "cv_", ",", "t_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "x", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"x", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"x0", " ", "+", " ", 
+         RowBox[{"a", "*", 
+          RowBox[{"(", 
+           RowBox[{
+            RowBox[{
+             RowBox[{
+              RowBox[{"-", 
+               RowBox[{"(", 
+                RowBox[{"x0", ".", "a"}], ")"}]}], "/", 
+              RowBox[{"(", 
+               RowBox[{"a", ".", "a"}], ")"}]}], "*", 
+             RowBox[{"(", 
+              RowBox[{"1", "-", 
+               RowBox[{"Cos", "[", 
+                RowBox[{"t", "*", 
+                 RowBox[{"Sqrt", "[", 
+                  RowBox[{"cv", "*", 
+                   RowBox[{"(", 
+                    RowBox[{"a", ".", "a"}], ")"}]}], "]"}]}], "]"}]}], 
+              ")"}]}], "+", " ", 
+            RowBox[{
+             RowBox[{
+              RowBox[{"Sqrt", "[", 
+               RowBox[{"1", "-", 
+                RowBox[{"cv", "*", 
+                 RowBox[{"(", 
+                  RowBox[{"x0", ".", "x0"}], ")"}]}]}], "]"}], "/", 
+              RowBox[{"Sqrt", "[", 
+               RowBox[{"cv", "*", 
+                RowBox[{"(", 
+                 RowBox[{"a", ".", "a"}], ")"}]}], "]"}]}], "*", 
+             RowBox[{"Sin", "[", 
+              RowBox[{"t", "*", 
+               RowBox[{"Sqrt", "[", 
+                RowBox[{"cv", "*", 
+                 RowBox[{"(", 
+                  RowBox[{"a", ".", "a"}], ")"}]}], "]"}]}], "]"}]}]}], 
+           ")"}]}]}], ")"}], " ", "//.", " ", 
+       RowBox[{"{", "}"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"D", "[", 
+            RowBox[{"x", ",", "t"}], "]"}], ")"}], "^", "2"}], " ", "-", " ", 
+         
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"1", "-", 
+            RowBox[{"cv", "*", 
+             RowBox[{"(", 
+              RowBox[{"x", ".", "x"}], ")"}]}]}], ")"}], "*", 
+          RowBox[{
+           RowBox[{"(", "a", ")"}], "^", "2"}]}]}], " ", "//", " ", 
+        "Expand"}], " ", "//", " ", "TrigReduce"}], " ", "//", " ", 
+      "Factor"}]}]}], "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"curvtrantest", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"x0", ",", "0", ",", "0"}], "}"}], ",", 
+   RowBox[{"{", 
+    RowBox[{"a1", ",", "a2", ",", "0"}], "}"}], ",", "cv", ",", "t"}], 
+  "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"curvdiltest", "[", 
+   RowBox[{"x0_", ",", "cv_", ",", "t_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "x", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"x", " ", "=", " ", 
+      RowBox[{"x0", "/", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"Cosh", "[", "t", "]"}], "+", 
+         RowBox[{
+          RowBox[{"Sqrt", "[", 
+           RowBox[{"1", "-", 
+            RowBox[{"cv", 
+             RowBox[{"(", 
+              RowBox[{"x0", ".", "x0"}], ")"}]}]}], "]"}], "*", 
+          RowBox[{"Sinh", "[", "t", "]"}]}]}], ")"}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"D", "[", 
+            RowBox[{"x", ",", "t"}], "]"}], ")"}], "^", "2"}], " ", "-", " ", 
+         
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"1", " ", "-", " ", 
+            RowBox[{"cv", "*", 
+             RowBox[{"(", 
+              RowBox[{"x", ".", "x"}], ")"}]}]}], ")"}], " ", "*", " ", 
+          RowBox[{
+           RowBox[{"(", "x", ")"}], "^", "2"}]}]}], " ", "//", " ", 
+        "Factor"}], " ", "//", " ", "TrigReduce"}], " ", "//", " ", 
+      "Factor"}]}]}], "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"curvdiltest", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"x0", ",", "0", ",", "0"}], "}"}], ",", "cv", ",", "t"}], 
+  "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"curvskewtest", "[", 
+   RowBox[{"x0_", ",", "a_", ",", "cv_", ",", "t_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "x", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"x", " ", "=", " ", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"x0", " ", "+", " ", 
+          RowBox[{"a", "*", 
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{
+              RowBox[{
+               RowBox[{"(", 
+                RowBox[{"x0", ".", "a"}], ")"}], "/", 
+               RowBox[{"(", 
+                RowBox[{"a", ".", "a"}], ")"}]}], "*", 
+              RowBox[{"(", 
+               RowBox[{
+                RowBox[{"Cosh", "[", 
+                 RowBox[{"w", "*", "t"}], "]"}], "-", "1"}], ")"}]}], " ", 
+             "+", " ", 
+             RowBox[{
+              RowBox[{"(", 
+               RowBox[{"1", "/", "w"}], ")"}], "*", 
+              RowBox[{"Sinh", "[", 
+               RowBox[{"w", "*", "t"}], "]"}]}]}], ")"}]}]}], ")"}], "/", 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{"Cosh", "[", 
+           RowBox[{"w", "*", "t"}], "]"}], "+", 
+          RowBox[{"cv", "*", 
+           RowBox[{
+            RowBox[{"(", 
+             RowBox[{"x0", ".", "a"}], ")"}], "/", "w"}], "*", 
+           RowBox[{"Sinh", "[", 
+            RowBox[{"w", "*", "t"}], "]"}]}]}], ")"}]}], " ", "/.", " ", 
+       RowBox[{"w", "\[Rule]", 
+        RowBox[{"Sqrt", "[", 
+         RowBox[{"cv", "*", 
+          RowBox[{"(", 
+           RowBox[{"a", ".", "a"}], ")"}]}], "]"}]}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{
+        RowBox[{
+         RowBox[{"D", "[", 
+          RowBox[{"x", ",", "t"}], "]"}], " ", "-", " ", 
+         RowBox[{"(", 
+          RowBox[{"a", " ", "-", " ", 
+           RowBox[{"cv", "*", 
+            RowBox[{"(", 
+             RowBox[{"x", ".", "a"}], ")"}], "*", "x"}]}], ")"}]}], " ", "//",
+         " ", "Factor"}], " ", "//", " ", "TrigReduce"}], " ", "//", " ", 
+      "Factor"}]}]}], "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"curvskewtest", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"x0", ",", "0", ",", "0"}], "}"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"a1", ",", "a2", ",", "0"}], "}"}], ",", "cv", ",", "t"}], "]"}],
+   " ", "//", " ", "Factor"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"Composition", " ", "of", " ", "flat"}], "-", 
+    RowBox[{"space", " ", "conformal", " ", "symmetry", " ", 
+     RowBox[{"operations", ":", " ", 
+      RowBox[{"skew", " ", "+", " ", "translate"}]}]}]}], ",", " ", "skew"}], 
+  " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flatskdlcompos", "[", 
+   RowBox[{"n_", ",", "x_", ",", "a_", ",", "b_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"xv", ",", "av"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"xv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"x", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"av", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"a", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"flatskew", "[", 
+        RowBox[{
+         RowBox[{"b", "*", "xv"}], ",", "av"}], "]"}], " ", "-", " ", 
+       RowBox[{"b", "*", 
+        RowBox[{"flatskew", "[", 
+         RowBox[{"xv", ",", 
+          RowBox[{"av", "*", "b"}]}], "]"}]}]}], " ", "//", " ", 
+      "Factor"}]}]}], "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flattwoskcompos", "[", 
+   RowBox[{"n_", ",", "x_", ",", "a_", ",", "b_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"xv", ",", "av", ",", "bv"}], "}"}], ",", "\[IndentingNewLine]", 
+    
+    RowBox[{
+     RowBox[{"xv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"x", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"av", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"a", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"bv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"b", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"flatskew", "[", 
+        RowBox[{
+         RowBox[{"flatskew", "[", 
+          RowBox[{"xv", ",", "av"}], "]"}], ",", "bv"}], "]"}], " ", "-", " ", 
+       RowBox[{"flatskew", "[", 
+        RowBox[{"xv", ",", 
+         RowBox[{"av", "+", "bv"}]}], "]"}]}], " ", "//", " ", "Factor"}]}]}],
+    "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Verification", " ", "of", " ", "metric", " ", "conformality"}], 
+  " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flatskmet", "[", 
+   RowBox[{"n_", ",", "x_", ",", "a_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"av", ",", "xv", ",", "nxv", ",", "nxvdv", ",", "grad"}], "}"}], 
+    ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"av", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"a", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"xv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"x", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"nxv", " ", "=", " ", 
+      RowBox[{"flatskew", "[", 
+       RowBox[{"xv", ",", "av"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"grad", "[", 
+       RowBox[{"y_", ",", "xlst_"}], "]"}], " ", ":=", " ", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"D", "[", 
+         RowBox[{"y", ",", "#"}], "]"}], "&"}], " ", "/@", " ", "xlst"}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{"nxvdv", " ", "=", " ", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"grad", "[", 
+         RowBox[{"#", ",", "xv"}], "]"}], "&"}], " ", "/@", " ", "nxv"}]}], 
+     ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"nxvdv", ".", 
+        RowBox[{"Transpose", "[", "nxvdv", "]"}]}], " ", "-", " ", 
+       RowBox[{
+        RowBox[{"IdentityMatrix", "[", "n", "]"}], "/", 
+        RowBox[{
+         RowBox[{"(", 
+          RowBox[{"1", " ", "+", " ", 
+           RowBox[{"2", 
+            RowBox[{"(", 
+             RowBox[{"xv", ".", "av"}], ")"}]}], " ", "+", " ", 
+           RowBox[{
+            RowBox[{"(", 
+             RowBox[{"xv", ".", "xv"}], ")"}], 
+            RowBox[{"(", 
+             RowBox[{"av", ".", "av"}], ")"}]}]}], ")"}], "^", "2"}]}]}], " ",
+       "//", " ", "Factor"}]}]}], "\[IndentingNewLine]", "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Verification", " ", "of", " ", "flatskew", " ", "inversion"}], " ",
+   "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"flatskinv", "[", 
+   RowBox[{"n_", ",", "x_", ",", "a_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"av", ",", "xv", ",", "nxv"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"av", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"a", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"xv", " ", "=", " ", 
+      RowBox[{"Array", "[", 
+       RowBox[{"x", ",", "n"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"nxv", " ", "=", " ", 
+      RowBox[{"flatskew", "[", 
+       RowBox[{"xv", ",", "av"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"nxv", "/", 
+        RowBox[{"(", 
+         RowBox[{"nxv", ".", "nxv"}], ")"}]}], " ", "-", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"xv", "/", 
+          RowBox[{"(", 
+           RowBox[{"xv", ".", "xv"}], ")"}]}], " ", "+", " ", "av"}], ")"}]}],
+       " ", "//", " ", "Factor"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Verify", " ", "sphere", " ", "conformal", " ", "transform"}], " ", 
+  "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"mxt", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"m", "+", "t"}], ")"}], "/", 
+    RowBox[{"(", 
+     RowBox[{"1", "+", 
+      RowBox[{"m", "*", "t"}]}], ")"}]}]}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{
+     RowBox[{"D", "[", 
+      RowBox[{"mxt", ",", "t"}], "]"}], " ", "/.", " ", 
+     RowBox[{"t", "\[Rule]", "0"}]}], ")"}], " ", "-", " ", 
+   RowBox[{"(", 
+    RowBox[{"1", "-", 
+     RowBox[{"m", "^", "2"}]}], ")"}]}], " ", "//", " ", "Factor"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"1", "/", 
+        RowBox[{"(", 
+         RowBox[{"1", "-", 
+          RowBox[{"mxt", "^", "2"}]}], ")"}]}], "*", 
+       RowBox[{
+        RowBox[{"D", "[", 
+         RowBox[{"mxt", ",", "m"}], "]"}], "^", "2"}]}], ",", " ", 
+      RowBox[{"(", 
+       RowBox[{"1", "-", 
+        RowBox[{"mxt", "^", "2"}]}], ")"}]}], "}"}], "/", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"1", "/", 
+       RowBox[{"(", 
+        RowBox[{"1", "-", 
+         RowBox[{"m", "^", "2"}]}], ")"}]}], ",", 
+      RowBox[{"(", 
+       RowBox[{"1", "-", 
+        RowBox[{"m", "^", "2"}]}], ")"}]}], "}"}]}], " ", "-", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"1", "-", 
+       RowBox[{"t", "^", "2"}]}], ")"}], "/", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "+", 
+        RowBox[{"m", "*", "t"}]}], ")"}], "^", "2"}]}], "*", 
+    RowBox[{"{", 
+     RowBox[{"1", ",", "1"}], "}"}]}]}], " ", "//", " ", "Factor"}]], "Input"]
+},
+WindowSize->{808, 695},
+WindowMargins->{{Automatic, 225}, {Automatic, 0}},
+FrontEndVersion->"11.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (September \
+21, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[558, 20, 2271, 74, 1227, "Text"],
+Cell[2832, 96, 575, 19, 32, "Input"],
+Cell[3410, 117, 1263, 33, 159, "Input"],
+Cell[4676, 152, 108, 2, 32, "Input"],
+Cell[4787, 156, 1070, 28, 138, "Input"],
+Cell[5860, 186, 2415, 68, 138, "Input"],
+Cell[8278, 256, 233, 7, 32, "Input"],
+Cell[8514, 265, 1326, 39, 96, "Input"],
+Cell[9843, 306, 161, 5, 32, "Input"],
+Cell[10007, 313, 2122, 60, 117, "Input"],
+Cell[12132, 375, 277, 8, 32, "Input"],
+Cell[12412, 385, 320, 8, 54, "Input"],
+Cell[12735, 395, 907, 24, 117, "Input"],
+Cell[13645, 421, 1069, 28, 138, "Input"],
+Cell[14717, 451, 135, 3, 32, "Input"],
+Cell[14855, 456, 1858, 50, 201, "Input"],
+Cell[16716, 508, 134, 3, 32, "Input"],
+Cell[16853, 513, 1071, 29, 138, "Input"],
+Cell[17927, 544, 133, 3, 32, "Input"],
+Cell[18063, 549, 232, 8, 32, "Input"],
+Cell[18298, 559, 325, 10, 32, "Input"],
+Cell[18626, 571, 1045, 36, 54, "Input"]
+}
+]
+*)
+

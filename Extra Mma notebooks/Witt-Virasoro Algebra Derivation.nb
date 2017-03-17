@@ -1,0 +1,286 @@
+(* Content-type: application/mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 7.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       145,          7]
+NotebookDataLength[      7945,        278]
+NotebookOptionsPosition[      7105,        249]
+NotebookOutlinePosition[      7463,        265]
+CellTagsIndexPosition[      7420,        262]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+Cell["\<\
+Witt-Virasoro-algebra derivation
+
+[L(n),L(m)] = f(n,m)*L(n+m)
+
+what possible structure functions f?
+
+Antisymmetry:
+f(m,n) = - f(n,m)
+
+Jacobi identity:
+f(n,m)*f(n+m,k) + f(m,k)*f(m+k,n) + f(k,n)*f(k+n,m) = 0
+
+Canonical: f(n,m) = n - m
+
+Results:
+f(n,0) = f0*n
+f(n,m) = g(n)*g(m)/g(n+m) * fr(n/m)
+fr(1/x) = - fr(x)\
+\>", "Text"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"vsjac", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"f", "[", 
+      RowBox[{"i", ",", "j"}], "]"}], "*", 
+     RowBox[{"f", "[", 
+      RowBox[{
+       RowBox[{"i", "+", "j"}], ",", "k"}], "]"}]}], "-", 
+    RowBox[{
+     RowBox[{"f", "[", 
+      RowBox[{"j", ",", "k"}], "]"}], "*", 
+     RowBox[{"f", "[", 
+      RowBox[{"i", ",", 
+       RowBox[{"j", "+", "k"}]}], "]"}]}], "-", 
+    RowBox[{
+     RowBox[{"f", "[", 
+      RowBox[{"i", ",", "k"}], "]"}], "*", 
+     RowBox[{"f", "[", 
+      RowBox[{
+       RowBox[{"k", "+", "i"}], ",", "j"}], "]"}]}]}]}], ";"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"vsjac", " ", "/.", " ", 
+   RowBox[{"k", "\[Rule]", "0"}]}], " ", "//", " ", "Factor"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"%", " ", "/.", " ", 
+   RowBox[{
+    RowBox[{"f", "[", 
+     RowBox[{"x_", ",", "0"}], "]"}], "\[Rule]", 
+    RowBox[{"f0", "*", "x"}]}]}], " ", "//", " ", "Factor"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"D", "[", 
+    RowBox[{"vsjac", ",", "k"}], "]"}], " ", "/.", " ", 
+   RowBox[{"k", "\[Rule]", "0"}]}], " ", "//", " ", "Factor"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"%", " ", "/.", " ", 
+  RowBox[{
+   TagBox[
+    StyleBox[
+     RowBox[{
+      RowBox[{
+       RowBox[{"Derivative", "[", 
+        RowBox[{"0", ",", "1"}], "]"}], "[", "f", "]"}], "[", 
+      RowBox[{"x_", ",", "0"}], "]"}],
+     ShowSpecialCharacters->False,
+     ShowStringCharacters->True,
+     NumberMarks->True],
+    FullForm], " ", "\[Rule]", " ", 
+   RowBox[{"df", "[", "x", "]"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"vsjac1", " ", "=", " ", 
+  RowBox[{
+   RowBox[{"%", "/.", " ", 
+    RowBox[{
+     RowBox[{"f", "[", 
+      RowBox[{"x_", ",", "0"}], "]"}], "\[Rule]", 
+     RowBox[{"f0", "*", "x"}]}]}], " ", "//", " ", "Factor"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"vsjac2", " ", "=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"vsjac1", " ", "/.", " ", 
+      RowBox[{"{", 
+       RowBox[{"#", ",", 
+        RowBox[{"Thread", "[", 
+         RowBox[{"D", "[", 
+          RowBox[{"#", ",", "i"}], "]"}], "]"}], ",", 
+        RowBox[{"Thread", "[", 
+         RowBox[{"D", "[", 
+          RowBox[{"#", ",", "j"}], "]"}], "]"}]}], "}"}]}], "&"}], " ", "@", 
+    " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"f", "[", 
+       RowBox[{"i", ",", "j"}], "]"}], "\[Rule]", 
+      RowBox[{"Exp", "[", 
+       RowBox[{"flg", "[", 
+        RowBox[{
+         RowBox[{"Log", "[", 
+          RowBox[{"Sqrt", "[", 
+           RowBox[{
+            RowBox[{"i", "^", "2"}], "+", 
+            RowBox[{"j", "^", "2"}]}], "]"}], "]"}], ",", 
+         RowBox[{"j", "/", "i"}]}], "]"}], "]"}]}], ")"}]}], " ", "//", " ", 
+   "Factor"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"vsjac3", " ", "=", " ", 
+  RowBox[{"Refine", "[", 
+   RowBox[{
+    RowBox[{"MapAll", "[", 
+     RowBox[{"Factor", ",", 
+      RowBox[{"vsjac2", " ", "/.", " ", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"i", "\[Rule]", 
+          RowBox[{
+           RowBox[{"Exp", "[", "r", "]"}], "/", 
+           RowBox[{"Sqrt", "[", 
+            RowBox[{"1", "+", 
+             RowBox[{"a", "^", "2"}]}], "]"}]}]}], ",", 
+         RowBox[{"j", "\[Rule]", 
+          RowBox[{
+           RowBox[{"Exp", "[", "r", "]"}], "*", 
+           RowBox[{"a", "/", 
+            RowBox[{"Sqrt", "[", 
+             RowBox[{"1", "+", 
+              RowBox[{"a", "^", "2"}]}], "]"}]}]}]}]}], "}"}]}]}], "]"}], ",", 
+    RowBox[{"r", ">", "0"}]}], "]"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"Refine", "[", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"vsjac3", " ", "/.", " ", 
+      RowBox[{
+       RowBox[{"df", "[", "x_", "]"}], " ", "->", " ", 
+       RowBox[{"dflg", "[", 
+        RowBox[{"Log", "[", "x", "]"}], "]"}]}]}], ")"}], " ", "//.", " ", 
+    RowBox[{
+     RowBox[{"Log", "[", 
+      RowBox[{"x_", "*", "y_"}], "]"}], "\[Rule]", 
+     RowBox[{
+      RowBox[{"Log", "[", "x", "]"}], "+", 
+      RowBox[{"Log", "[", "y", "]"}]}]}]}], ",", " ", 
+   RowBox[{"r", ">", "0"}]}], "]"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{"Integrate", " ", "over", " ", 
+   RowBox[{"r", ".", " ", "It"}], " ", "will", " ", "produce", " ", "a", " ", 
+   "function", " ", "of", " ", "a", " ", "as", " ", "its", " ", "integration",
+    " ", 
+   RowBox[{"constant", "."}]}], " ", "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Solution", ":", " ", 
+    RowBox[{
+    "g", " ", "can", " ", "be", " ", "absorbed", " ", "into", " ", "the", " ",
+      "algebra", " ", "generators"}]}], ",", " ", 
+   RowBox[{
+    RowBox[{"while", " ", 
+     RowBox[{"fr", "[", 
+      RowBox[{"1", "/", "x"}], "]"}]}], " ", "=", " ", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"-", " ", 
+       RowBox[{"fr", "[", "x", "]"}]}], " ", "implying", " ", 
+      RowBox[{"fr", "[", "1", "]"}]}], " ", "=", " ", "0"}]}]}], " ", 
+  "*)"}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"vsjacsl1", " ", "=", " ", 
+  RowBox[{
+   RowBox[{"vsjac", " ", "/.", " ", 
+    RowBox[{
+     RowBox[{"f", "[", 
+      RowBox[{"i_", ",", "j_"}], "]"}], " ", "\[Rule]", " ", 
+     RowBox[{
+      RowBox[{"g", "[", "i", "]"}], "*", 
+      RowBox[{
+       RowBox[{"g", "[", "j", "]"}], "/", 
+       RowBox[{"g", "[", 
+        RowBox[{"i", "+", "j"}], "]"}]}], "*", 
+      RowBox[{"fr", "[", 
+       RowBox[{"i", "/", "j"}], "]"}]}]}]}], " ", "//", " ", 
+   "Factor"}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"vsjacsl2", " ", "=", " ", 
+  RowBox[{"vsjacsl1", " ", "/.", " ", 
+   RowBox[{
+    RowBox[{"g", "[", "x_", "]"}], "\[Rule]", "1"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"vsjacsl3", " ", "=", " ", 
+  RowBox[{"vsjacsl2", " ", "/.", " ", 
+   RowBox[{"k", "\[Rule]", "1"}]}]}]], "Input"],
+
+Cell[BoxData[
+ RowBox[{"(*", " ", 
+  RowBox[{
+   RowBox[{"Hard", " ", "to", " ", 
+    RowBox[{"proceed", ".", " ", "The"}], " ", "canonical", " ", "value", " ", 
+    RowBox[{"fr", "[", "x", "]"}]}], " ", "=", " ", 
+   RowBox[{
+    RowBox[{"fr0", "*", 
+     RowBox[{"(", 
+      RowBox[{"x", " ", "-", " ", 
+       RowBox[{"1", "/", "x"}]}], ")"}], " ", "with", " ", 
+     RowBox[{"g", "[", "x", "]"}]}], " ", "=", " ", 
+    RowBox[{"g0", "*", "x"}]}]}], " ", "*)"}]], "Input"]
+},
+WindowSize->{640, 696},
+WindowMargins->{{Automatic, 17}, {Automatic, 2}},
+FrontEndVersion->"11.0 for Mac OS X x86 (32-bit, 64-bit Kernel) (September \
+21, 2016)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[545, 20, 335, 19, 353, "Text"],
+Cell[883, 41, 622, 21, 32, "Input"],
+Cell[1508, 64, 133, 3, 32, "Input"],
+Cell[1644, 69, 212, 6, 32, "Input"],
+Cell[1859, 77, 187, 5, 32, "Input"],
+Cell[2049, 84, 424, 14, 32, "Input"],
+Cell[2476, 100, 250, 7, 32, "Input"],
+Cell[2729, 109, 902, 28, 75, "Input"],
+Cell[3634, 139, 773, 22, 117, "Input"],
+Cell[4410, 163, 546, 16, 54, "Input"],
+Cell[4959, 181, 299, 6, 54, "Input"],
+Cell[5261, 189, 548, 16, 54, "Input"],
+Cell[5812, 207, 500, 15, 54, "Input"],
+Cell[6315, 224, 168, 4, 32, "Input"],
+Cell[6486, 230, 137, 3, 32, "Input"],
+Cell[6626, 235, 475, 12, 54, "Input"]
+}
+]
+*)
+
