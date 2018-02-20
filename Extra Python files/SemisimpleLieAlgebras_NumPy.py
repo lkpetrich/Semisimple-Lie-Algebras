@@ -314,6 +314,11 @@
 # reduces any algebra to A1, with the rep height becoming
 # the largest highest weight.
 #
+# SubalgVector(family,dsttype,dstwts)
+# goes from an algebra of family f to one with type dsttype,
+# with the source algebra's fundamental or vector rep
+# being mapped onto the destination algebra's irrep with highest weights dstwts.
+#
 # Some extra ones named individually.
 #
 # Mentioned by John Baez in "The Octonions":
@@ -3330,6 +3335,139 @@ def SubalgSUSp(n):
 # There are some solutions for some subalgebra-matrix values different from 1.
 def SubalgHeightA1(latype):
 	stsms = (((1,1),latype[1]*[(1,)]),)
+	u1s = ()
+	return SubAlgebraBrancher(latype,stsms,u1s)
+
+# Reduces a member of the four infinite families to
+# another algebra by taking the source algebra's vector rep
+# (SU and Sp fundamental) to the destination algebra's supplied rep.
+
+def SAVNumOrder(x1,x2):
+	if x1 < x2: return 1
+	elif x1 > x2: return -1
+	else: return 0
+
+def SAVRootOrder(rt1,rt2):
+	t1 = sum(rt1)
+	t2 = sum(rt2)
+	ord = SAVNumOrder(t2,t1)
+	if ord != 0: return ord
+	
+	n = len(rt1)
+	for k in xrange(n):
+		ord = SAVNumOrder(rt2[k],rt1[k])
+		if ord != 0: return ord
+	
+	return 0
+	
+
+def SubalgVector(family,dsttype,dstwts):
+	ndst = TotalDegen(dsttype,dstwts)
+	
+	if family == 1:
+		# A(n)
+		n = ndst - 1
+		if n < 1: return None
+	elif family == 2:
+		# B(n)
+		n = (ndst - 1) // 2
+		if ndst != (2*n+1): return None
+		if n < 1: return None
+	elif family == 3:
+		# C(n)
+		n = ndst // 2
+		if ndst != (2*n): return None
+		if n < 1: return None
+	elif family == 4:
+		# D(n) -- exclude D(1), D(2)
+		n = ndst // 2
+		if ndst != (2*n): return None
+		if n < 3: return None
+	else:
+		return None
+	
+	# Get the destination rep, expand it, sort it, and de-integerize it
+	dstrep = GetRep(dsttype, dstwts)
+	drxp = flatten([wr[0]*[wr[1]] for wr in dstrep])
+	drxp.sort(SAVRootOrder)
+	
+	la = GetLieAlgebra(dsttype)
+	den = la.ictnden
+	drxp = [[Fraction(x,den) for x in rt] for rt in drxp]
+	
+	# Is the destination rep (pseudo)real?
+	if family >= 2:
+		for k in xrange(len(drxp)):
+			rt1 = drxp[k]
+			rt2 = drxp[-k-1]
+			for l in xrange(len(rt1)):
+				if rt1[l] != - rt2[l]:
+					return None
+	
+	# The inverse of the source rep
+	if family == 1:
+		# A(n)
+		srcinv = []
+		for k in xrange(n):
+			row = (n+1)*[0]
+			row[k] = 1
+			row[k+1] = -1
+			srcinv.append(row)		
+	elif family == 2:
+		# B(n)
+		srcinv = []
+		for k in xrange(n-1):
+			row = (2*n+1)*[0]
+			row[k] = Fraction(1,2)
+			row[k+1] = - Fraction(1,2)
+			row[-k-1] = - Fraction(1,2)
+			row[-k-2] = Fraction(1,2)
+			srcinv.append(row)
+		row = (2*n+1)*[0]
+		row[n-1] = Fraction(1,2)
+		row[-n] = - Fraction(1,2)
+		srcinv.append(row)	
+	elif family == 3:
+		# C(n)
+		srcinv = []
+		for k in xrange(n-1):
+			row = (2*n)*[0]
+			row[k] = Fraction(1,2)
+			row[k+1] = - Fraction(1,2)
+			row[-k-1] = - Fraction(1,2)
+			row[-k-2] = Fraction(1,2)
+			srcinv.append(row)
+		row = (2*n)*[0]
+		row[n-1] = 1
+		row[-n] = - 1
+		srcinv.append(row)
+	elif family == 4:
+		# D(n)
+		srcinv = []
+		for k in xrange(n-2):
+			row = (2*n)*[0]
+			row[k] = Fraction(1,2)
+			row[k+1] = - Fraction(1,2)
+			row[-k-1] = - Fraction(1,2)
+			row[-k-2] = Fraction(1,2)
+			srcinv.append(row)
+		row = (2*n)*[0]
+		row[n-2] = Fraction(1,2)
+		row[n-1] = Fraction(1,2)
+		row[-n+1] = - Fraction(1,2)
+		row[-n] = - Fraction(1,2)
+		srcinv.append(row)
+		row = (2*n)*[0]
+		row[n-2] = Fraction(1,2)
+		row[n-1] = - Fraction(1,2)
+		row[-n+1] = - Fraction(1,2)
+		row[-n] = Fraction(1,2)
+		srcinv.append(row)
+	
+	proj = mul_mm(srcinv,drxp)
+	
+	latype = (family,n)
+	stsms = ((dsttype,proj),)
 	u1s = ()
 	return SubAlgebraBrancher(latype,stsms,u1s)
 
