@@ -1000,7 +1000,7 @@ LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LAINT family, LAINT rank, vec
 
 LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LieAlgebra &la, const LAINT *MaxWts)
 	{return GetRepObject(rotype, la.GetParams(),MaxWts);}
-LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LieAlgebra &la, LAINT rank, vector<LAINT> &MaxWts)
+LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LieAlgebra &la, vector<LAINT> &MaxWts)
 	{return GetRepObject(rotype, la.GetParams(),(const LAINT *)&MaxWts[0]);}
 
 void ClearLieAlgReps()

@@ -248,7 +248,7 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 	}
 	
 	// Create a list of
-	// (subakgebra type), (which orig roots because which subalgebra roots)
+	// (subalgebra type), (which orig roots because which subalgebra roots)
 	// The input roots will be substituted in later.
 	// 1-based here
 	// Append each one to RootSplit, count off as one goes
@@ -1476,6 +1476,209 @@ LABrancher SubalgHeightA1(const LieAlgebraParams &OrigAlgParams)
 
 	Proj.SubMatrix.resize(OrigAlgParams.rank,1);
 	Proj.SubMatrix.fill(1);
+	
+	Brancher.Projectors.push_back(Proj);
+	
+	Brancher.Setup();
+	return Brancher;
+}
+
+// Reduces a member of the four infinite families to
+// another algebra by taking the source algebra's vector rep
+// (SU and Sp fundamental) to the destination algebra's supplied rep.
+
+// Index-sort object
+struct SAVSorter
+{
+	// Data reference
+	LieAlgRepPtr RepPtr;
+	
+	// The sort function in algorthm.h needs this function
+	// It must work like < (true for correct order, false if incorrect order or equal)
+	bool operator() (LAINT ix1, LAINT ix2);
+};
+
+bool SAVSorter::operator() (LAINT ix1, LAINT ix2)
+{
+	LAINT rank = RepPtr->vlen;
+	
+	LAINT *root1 = &RepPtr->Roots(ix1,0);
+	LAINT *root2 = &RepPtr->Roots(ix2,0);
+	
+	// Heights first
+	LAINT ttl1 = 0;
+	LAINT ttl2 = 0;
+	sum(ttl1,root1,rank);
+	sum(ttl2,root2,rank);
+	if (ttl1 != ttl2) return (ttl2 < ttl1);
+	
+	// Member by member
+	return VecLessThan(root2,root1,rank);
+}
+
+LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
+	const LAINT *DestMaxWeights)
+{
+	// if the inputs are bad, then return an empty brancher
+	LABrancher Brancher;
+	Brancher.clear();
+	
+	// The size of the dest rep
+	LieAlgebra &DestLA = GetLieAlgebra(DestAlgParams);
+	TDINT RepSizeObj = TotalDegen(DestLA, DestMaxWeights);
+	
+	// It should not be too big for the C++ code
+	if (!RepSizeObj.fits_sshort_p()) {return Brancher;}
+	
+	LAINT ndst = RepSizeObj.get_ui();
+	LAINT n = 0;
+	
+	switch(family)
+	{
+	case 1:
+		// A(n)
+		n = ndst - 1;
+		if (n < 1) return Brancher;
+		break;
+	case 2:
+		// B(n)
+		n = (ndst - 1) >> 1;
+		if (ndst != (2*n+1)) return Brancher;
+		if (n < 1) return Brancher;
+		break;
+	case 3:
+		// C(n)
+		n = ndst >> 1;
+		if (ndst != (2*n)) return Brancher;
+		if (n < 1) return Brancher;
+		break;
+	case 4:
+		// D(n) -- exclude D(1), D(2)
+		n = ndst >> 1;
+		if (ndst != (2*n)) return Brancher;
+		if (n < 3) return Brancher;
+		break;
+	default:
+		return Brancher;
+	}
+	
+	// Get the destination rep, expand it, sort it, and de-integerize it
+	LieAlgRepPtr DestRepPtr = GetRepObject(RO_REP, DestLA, DestMaxWeights);
+	LAINT DestRank = DestRepPtr->vlen;
+	size_t NumRepBlks = DestRepPtr->Degens.size();
+	
+	// Create sort indices
+	vector<LAINT> SortIxs(NumRepBlks);
+	for (int k=0; k<NumRepBlks; k++)
+		SortIxs[k] = k;
+	
+	// Sort them
+	SAVSorter Sorter;
+	Sorter.RepPtr = DestRepPtr;
+	sort(SortIxs.begin(), SortIxs.end(), Sorter);
+	
+	LAINT RootDen = DestLA.InvCtnDen;
+	Matrix<BrSubMatEntry> RepXpnd(ndst,DestRank);
+	LAINT ix = 0;
+	for (LAINT k=0; k<NumRepBlks; k++)
+	{
+		LAINT kx = SortIxs[k];
+		LAINT degen = DestRepPtr->Degens[kx];
+		LAINT *root = &DestRepPtr->Roots(kx,0);
+		for (LAINT l=0; l<degen; l++)
+		{
+			for (LAINT m=0; m<DestRank; m++)
+			{
+				BrSubMatEntry deirt(root[m],RootDen);
+				RepXpnd(ix,m) = deirt;
+			}
+			ix++;
+		}
+	}
+	
+	// Is the destination rep (pseudo)real?
+	if (family >= 2)
+	{
+		for (LAINT k=0; k<ndst; k++)
+		{
+			Fraction<LAINT> *root1 = &RepXpnd(k,0);
+			Fraction<LAINT> *root2 = &RepXpnd(ndst-k-1,0);
+			for (LAINT m=0; m<DestRank; m++)
+				if (root1[m] != (- root2[m])) return Brancher;
+		}
+	}
+	
+	// The inverse of the source rep
+	BrSubMatEntry zero(0,1);
+	BrSubMatEntry one(1,1);
+	BrSubMatEntry half(1,2);
+	Matrix<BrSubMatEntry> SrcRepInv(n,ndst);
+	SrcRepInv.fill(zero);
+	switch(family)
+	{
+	case 1:
+		// A(n)
+		for (LAINT k=0; k<n; k++)
+		{
+			SrcRepInv(k,k) = one;
+			SrcRepInv(k,k+1) = - one;
+		}
+		break;
+	case 2:
+		// B(n)
+		for (LAINT k=0; k<(n-1); k++)
+		{
+			SrcRepInv(k,k) = half;
+			SrcRepInv(k,k+1) = - half;
+			SrcRepInv(k,ndst-k-1) = - half;
+			SrcRepInv(k,ndst-k-2) = half;			
+		}
+		SrcRepInv(n-1,n-1) = half;
+		SrcRepInv(n-1,ndst-n) = - half;
+		break;
+	case 3:
+		// C(n)
+		for (LAINT k=0; k<(n-1); k++)
+		{
+			SrcRepInv(k,k) = half;
+			SrcRepInv(k,k+1) = - half;
+			SrcRepInv(k,ndst-k-1) = - half;
+			SrcRepInv(k,ndst-k-2) = half;			
+		}
+		SrcRepInv(n-1,n-1) = one;
+		SrcRepInv(n-1,ndst-n) = - one;
+		break;
+	case 4:
+		// D(n)
+		for (LAINT k=0; k<(n-2); k++)
+		{
+			SrcRepInv(k,k) = half;
+			SrcRepInv(k,k+1) = - half;
+			SrcRepInv(k,ndst-k-1) = - half;
+			SrcRepInv(k,ndst-k-2) = half;			
+		}
+		SrcRepInv(n-2,n-2) = half;
+		SrcRepInv(n-2,n-1) = half;
+		SrcRepInv(n-2,ndst-n+1) = - half;
+		SrcRepInv(n-2,ndst-n) = - half;
+		SrcRepInv(n-1,n-2) = half;
+		SrcRepInv(n-1,n-1) = - half;
+		SrcRepInv(n-1,ndst-n+1) = - half;
+		SrcRepInv(n-1,ndst-n) = half;
+	}	
+	
+	// Final setup
+	LieAlgebraParams OrigAlgParams;
+	OrigAlgParams.family = family;
+	OrigAlgParams.rank = n;
+	Brancher.OrigAlg.Params = OrigAlgParams;
+	
+	LABrProjector Proj;
+	Proj.Params = DestAlgParams;
+	Proj.SubMatrix.resize(n,DestRank);
+	
+	// Create the projection matrix
+	mul_mm(Proj.SubMatrix, SrcRepInv, RepXpnd);
 	
 	Brancher.Projectors.push_back(Proj);
 	

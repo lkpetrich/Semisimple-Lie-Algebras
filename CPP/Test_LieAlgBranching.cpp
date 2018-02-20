@@ -584,19 +584,53 @@ int main(int argc, char **argv)
 			DumpBranchingSU(Brancher);
 		}
 		
-		LieAlgebraParams Params = {1,8};
-		printf("Height-A1 original: family, rank = %d, %d\n\n",Params.family,Params.rank);
-		LABrancher Brancher = SubalgHeightA1(Params);
-		vector<LAINT> MaxWts(Params.rank);
-		for (LAINT ix=0; ix<Params.rank; ix++)
 		{
-			printf("%3d:  ",ix);
-			fill(MaxWts.begin(),MaxWts.end(),0);
-			MaxWts[ix] = 1;
-			DumpWeights(MaxWts);
-			LACntdMaxWtList CWL = Brancher.DoBranching(MaxWts);
-			DumpCWL(CWL);
-			println();
+			LieAlgebraParams Params = {1,8};
+			printf("Height-A1 original: family, rank = %d, %d\n\n",Params.family,Params.rank);
+			LABrancher Brancher = SubalgHeightA1(Params);
+			vector<LAINT> MaxWts(Params.rank);
+			for (LAINT ix=0; ix<Params.rank; ix++)
+			{
+				printf("%3d:  ",ix);
+				fill(MaxWts.begin(),MaxWts.end(),0);
+				MaxWts[ix] = 1;
+				DumpWeights(MaxWts);
+				LACntdMaxWtList CWL = Brancher.DoBranching(MaxWts);
+				DumpCWL(CWL);
+				println();
+			}
+		}
+		
+		{
+			printf("Vector-to-irrep: A5 -> A2 {2,0}\n\n");
+			const LieAlgebraParams DestParams = {1,2};
+			const LAINT DestWts[2] = {2,0};
+			LABrancher Brancher = SubalgVector(1,DestParams,DestWts);
+			DumpBranchingSU(Brancher);
+		}
+		
+		{
+			printf("Vector-to-irrep: B10 -> B3 {0,1,0}\n\n");
+			const LieAlgebraParams DestParams = {2,3};
+			const LAINT DestWts[3] = {0,1,0};
+			LABrancher Brancher = SubalgVector(2,DestParams,DestWts);
+			DumpBranchingSOSp(Brancher,1);
+		}
+		
+		{
+			printf("Vector-to-irrep: C10 -> B2 {0,3}\n\n");
+			const LieAlgebraParams DestParams = {2,2};
+			const LAINT DestWts[2] = {0,3};
+			LABrancher Brancher = SubalgVector(3,DestParams,DestWts);
+			DumpBranchingSOSp(Brancher,0);
+		}
+		
+		{
+			printf("Vector-to-irrep: D5 -> B2 {0,2}\n\n");
+			const LieAlgebraParams DestParams = {2,2};
+			const LAINT DestWts[2] = {0,2};
+			LABrancher Brancher = SubalgVector(4,DestParams,DestWts);
+			DumpBranchingSOSp(Brancher,2);
 		}
 	}
 	

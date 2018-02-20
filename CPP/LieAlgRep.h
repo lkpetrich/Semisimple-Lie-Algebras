@@ -157,7 +157,7 @@ LieAlgRepPtr &GetRepObject(enum RepObjType rotype, const LieAlgebraParams &AlgPa
 LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LAINT family, LAINT rank, const LAINT *MaxWts);
 LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LAINT family, LAINT rank, vector<LAINT> &MaxWts);
 LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LieAlgebra &la, const LAINT *MaxWts);
-LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LieAlgebra &la, LAINT rank, vector<LAINT> &MaxWts);
+LieAlgRepPtr &GetRepObject(enum RepObjType rotype, LieAlgebra &la, vector<LAINT> &MaxWts);
 
 void ClearLieAlgReps();
 

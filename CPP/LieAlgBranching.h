@@ -117,6 +117,13 @@ LABrancher SubalgSUSp(LAINT n);
 // Height to A1, possible for every algebra
 LABrancher SubalgHeightA1(const LieAlgebraParams &OrigAlgParams);
 
+// Vector to irrep, possible for all the four infinite families
+// It goes from an algebra of family f to one with type dsttype,
+// with the source algebra's fundamental or vector rep
+// being mapped onto the destination algebra's irrep with highest weights dstwts.
+LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
+	const LAINT *DestMaxWeights);
+
 // Extra subalgebras, for the exceptional algebras individually
 // Created from the Mathematic version, but with - turned to _ in the names
 enum {
