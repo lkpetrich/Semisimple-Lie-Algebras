@@ -1273,7 +1273,7 @@ def WeylOrbitForDomWtExplicit(latype, maxwts):
 WeylOrbitCache = {}
 
 def GetOrbit(latype, maxwts):
-	# cale down the max wts to avoid using
+	# Scale down the max wts to avoid using
 	# multiple cache entries for multiples of the same orbit
 	mwscale = None
 	for w in maxwts:
