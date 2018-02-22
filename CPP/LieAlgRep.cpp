@@ -894,20 +894,45 @@ bool LieAlgebraRepByWOs(LieAlgRep &rep, LieAlgebra &la, const LAINT *MaxWts)
 	
 	LieAlgRep intrep(la.rank);
 	
+	// Workspace for roots and weights
+	vector<LAINT> WODWT(la.rank), Root(la.rank), Weight(la.rank);
+	
 	size_t NDWS = DWPtr->Degens.size();
 	for (int k=0; k<NDWS; k++)
 	{
 		LAINT Degen = DWPtr->Degens[k];
 		MatrixRow<LAINT> DWT(DWPtr->Weights,k);
 		
-		LieAlgRepPtr WOPtr = GetRepObject(RO_ORBIT, la, &DWT[0]);
+		// Find the scale factor for scaling down
+		LAINT MWScale = 0;
+		for (int i=0; i<la.rank; i++)
+		{
+			LAINT wt = DWT[i];
+			if (wt == 0) continue;
+			if (wt < 0) wt *= -1;
+			if (MWScale < 1)
+				MWScale = wt;
+			else
+				MWScale = GCD(MWScale,wt);
+		}
+		if (MWScale < 1) MWScale = 1;
+		
+		// Scale down
+		div_sv(&WODWT[0], MWScale, &DWT[0],la.rank);
+		
+		LieAlgRepPtr WOPtr = GetRepObject(RO_ORBIT, la, &WODWT[0]);
 		if (WOPtr.IsNull()) continue;
 		
 		size_t NEnts = WOPtr->Degens.size();
 		for (int i=0; i< NEnts; i++)
 		{
-			MatrixRow<LAINT> Root(WOPtr->Roots,i);
-			MatrixRow<LAINT> Weight(WOPtr->Weights,i);
+			MatrixRow<LAINT> WORoot(WOPtr->Roots,i);
+			MatrixRow<LAINT> WOWeight(WOPtr->Weights,i);
+			
+			// Restore the scale
+			mul_sv(&Root[0], MWScale, &WORoot[0],la.rank);
+			mul_sv(&Weight[0], MWScale, &WOWeight[0],la.rank);
+			
 			intrep.AddRoot(Degen, &Root[0], &Weight[0]);
 		}
 	}
