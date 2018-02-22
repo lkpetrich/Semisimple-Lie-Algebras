@@ -1300,14 +1300,32 @@ def WeylOrbitForDomWtExplicit(latype, maxwts_):
 WeylOrbitCache = {}
 
 def GetOrbit(latype, maxwts):
-	CacheKey = (tuple(latype), tuple(maxwts))
+	# Scale down the max wts to avoid using
+	# multiple cache entries for multiples of the same orbit
+	mwscale = None
+	for w in maxwts:
+		aw = abs(w)
+		if aw != 0:
+			if mwscale == None:
+				mwscale = aw
+			else:
+				mwscale = gcd(mwscale,aw)
+	if mwscale == None: mwscale = 1
+	mwred = div_sv(mwscale,maxwts)
+	
+	CacheKey = (tuple(latype), tuple(mwred))
 	if CacheKey not in WeylOrbitCache:
 		if latype[0] <= 4:
-			orb = WeylOrbitForDomWtExplicit(latype, maxwts)
+			orb = WeylOrbitForDomWtExplicit(latype, mwred)
 		else:
-			orb = WeylOrbitForDomWt(latype, maxwts)
+			orb = WeylOrbitForDomWt(latype, mwred)
 		WeylOrbitCache[CacheKey] = orb
-	return WeylOrbitCache[CacheKey]
+	orb = WeylOrbitCache[CacheKey]
+	
+	# Restore the scaling
+	return tuple([ tuple([ mwscale*orbent
+		for orbent in orblin])
+			for orblin in orb])
 
 
 # Statistics -- returns dom root, dom wt, length of orbit,
