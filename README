@@ -11,6 +11,15 @@ I have written this software in Mathematica, Python, and C++, and all three vers
 - Finding subalgebra representations: branching rules
 - Worked examples of much of the code
 
+Mathematica:
+- Semisimple Lie Algebras.nb
+- Semisimple Lie Algebras - Notable Physics Results.nb
+- Semisimple Lie Algebras - Test Suite.nb
+
+Python:
+- SemisimpleLieAlgebras.py
+- SSLA_NotablePhysicsResults.py
+
 The "notable physics results" are a sort of "greatest hits" of physics results that use Lie algebras, including results for different space-time dimensions, gauge symmetries, and flavor symmetries. Also included are some mathematical curiosities. More specifically:
 - Scalars, spinors, vectors, vector-spinors, and tensors in 4D, 10D, 11D, and also transverse dimensions 2D, 8D, 9D
 - Quark color and light-flavor symmetries; split of strange quarks from up and down ones
@@ -18,7 +27,8 @@ The "notable physics results" are a sort of "greatest hits" of physics results t
 - Mathematical curiosities: John Baez and G2, Giulio Racah and G2, ...
 
 Also included is some software for working with "Young diagrams", some nice graphical representations of SU(n) representations. Can do rep products (Littlewood-Richardson), and decomposition of reps into orbits (Kostka).
-
+- Young Diagrams for SU(n) Multiplets.nb
+- YoungDiagrams.py
 
 C++ version in directory CPP
 
@@ -55,6 +65,6 @@ Its subdirectory Tests contains
 - refcnt.cpp -- test of reference-counted pointer
 - typelens.cpp -- lengths of integer types
 
-Extra Mma Notebooks -- contains various extra sorts of stuff, like constructions of various representations and attempts to find higher-power invariants.
+Extra Mma Notebooks -- contains files for doing such extras as explicit constructions of various representations and attempts to find higher-power invariants.
 
 Extra Python Files -- contains versions of the main Python files that use Numerical Python (NumPy): http://www.numpy.org/ Though their performance is disappointing, I am including them for the benefit of anyone who might want to experiment with them.
