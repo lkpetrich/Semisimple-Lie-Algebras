@@ -10,6 +10,7 @@ Worked examples of much of the code
 Mathematica notebooks:
 Semisimple Lie Algebras.nb
 Semisimple Lie Algebras - Notable Physics Results.nb
+Semisimple Lie Algebras - Test Suite.nb
 Young Diagrams for SU(n) Multiplets.nb
 
 Python source files:
