@@ -69,7 +69,73 @@ Its subdirectory Tests contains
 - refcnt.cpp -- test of reference-counted pointer
 - typelens.cpp -- lengths of integer types
 
-## Extra files
+# Young Diagrams
+
+Young diagrams are a graphical technique that can be convenient for finding features of representations of Lie algebras of kinds of matrices: SU(n), SO(n), Sp(n) for size parameter n. These diagrams consist of boxes that extend rightward and downward from a top-left box. For representations:
+
+Vector:  
+[]  
+Symmetric 2-tensor:  
+[] []  
+Antisymmetric 2-tensor:  
+[]  
+[]  
+Mixed 3-tensor:  
+[] []  
+[]  
+
+Notebook: Young Diagrams.nb
+
+In it:
+- Young-diagram operations: conversion to and from highest-weight vectors, and transpose
+- Degeneracy: representation size
+- Repreentation products for SU(n): Littlewood-Richardson rule
+- Vector-Representation Powers for SU(n)
+- Weyl Orbits for SU(n)
+- Branching Rules: SU(n) to SO(n) and Sp(n) -- good for decomposing a general tensor rep into traceless ones, with SU(n) into SO(n)
+- Young-Diagram Nesting
+- Symmetric Functions and Related Ones
+ - Symmetric and Alternating Group Characters
+ - Symmetric Polynomial
+ - Schur Polynomials - a kind of symmetric polynomial related to SU(n) algebra characters
+ - Plethysms - Symmetrized Powers
+
+# Higher-Dimensional Supersymmetry and Supergravity
+
+Supersymmetry and supergravity in at least four space-time dimensions, all the way up to eleven of them. Ten-dimensional supergravity theories are a part of supersymmetric-string ("superstring") theories, and the single eleven-dimensional theory is a part of a proposed unification of string theory called "M theory".
+
+Notebook: Higher-Dimensional Supersymmetry and Supergravity.nb
+
+Has the multiplet structure for every SUGRA theory, expressed in the format used in notebook Semisimple Lie Algebras.nb
+
+Also has differences in multiplet content between theories, and generation of some theories by multiplet products.
+
+It also has some attempts at defining SUSY gauge theories between four and ten dimensions, where such theories are most naturally defined.
+
+# Virasoro and Super-Virasoro Infinite-Dimensional Algebras
+
+Infinite-dimensional Lie algebras important in string theory.
+
+Notebook: Virasoro and Super-Virasoro algebras.nb
+
+The Witt-Virasoro algebra is this infinite-dimensional one, with generators L(n) satisfying commutator relation
+```math
+[L_n,L_m] = L_n \cdot L_m - L_m \cdot L_n = (n - m) L_{n+m} + (c_0 + c_1 n^2) \delta_{n+m,0}
+```
+The second term in the right expression is a "central charge".
+
+The supersymmetric extension of this algebra has fermionic generators G(r), satisfying an anticommutation relation. By comparison, the L(n) are bosonic, like generators of Lie algebras in general.
+```math
+[L_n,G_r] = L_n \cdot G_r - G_r \cdot L_n = (n/2 - r) G_{n+r}
+```
+```math
+\{G_r,G_s\} = G_r \cdot G_s + G_s \cdot G_r = 2 L_{r+s} + (c_0 + 4 c_1 r^2) \delta_{r+s,0}
+```
+Note the plus in the middle expression, the expansion of the anticommutator in the left expression.
+
+This notebook is for verifying and deriving those expressions, with only partial success in doing that derivation.
+
+# Extra files
 
 Extra Mma Notebooks -- contains files for doing such extras as explicit constructions of various representations and attempts to find higher-power invariants.
 
