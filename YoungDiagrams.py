@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python3
 # 
 # For handling SU(n) multiplets with Young diagrams.
 # SU(n) is the Lie algebra A(n-1)
@@ -16,18 +16,13 @@
 # * Contracted Young diagrams: list of row lengths
 # * Variable-length weight vectors
 # * Fixed-length weight vectors: length n-1 for SU(n) / A(n-1)
-#
-# Note: unlike the Mathematica version, this code will require
-# separate implementation of the symbolic-n case, by treating
-# polynomials in n as arrays of coefficients.
 # 
-# 
-# The code avoids  trailing empty lists for the first one,
+# The code avoids trailing empty lists for the first one,
 # and trailing zeros for the second and third ones.
 # 
-# Variable weights too long makes None.
-# 
-# ** Data Conversion ** converts between all four data types
+#
+# ** Data Conversion **
+# converts between all four data types
 #
 # Going to fixed-length weights:
 # n = (weight dimension) + 1, for SU(n)
@@ -46,56 +41,64 @@
 # FxdWtsToCtYoung(fwts) -- fixed-length weights to contracted Young
 # XpYoungToFxdWts(ydgm,n) -- expanded Young to fixed-length weights
 # FxdWtsToXpYoung(fwts,func) -- fixed-length weights to expanded Young
-# 
-# ** Young-Diagram Operations ** does relabeling
+#
+#
+# ** Young-Diagram Operations **
+# does relabeling
 # and transposing of Young diagrams.
 # 
 # RelabelYoung(ydgm,func) -- relabels an expanded diagram
-# with a labeling function
+# applying labeling function func with args row, column
 #
 # Transposes a Young diagram to find its dual
 # TransposeXpYoung(ydgm) -- expanded Young
 # TransposeCtYoung(yrls) -- contracted Young
 # FastTpCtYoung(yrls)  -- contracted young, fast
-# 
-# ** SU(n) Total Dimensions ** direct from the weights
 #
-# n = (weight dimension) + 1, for SU(n)
-# SUnDimensionXpYg(ydgm,n) -- expanded Young
-# SUnDimensionCtYg(yrls,n) -- contraced Young
-# SUnDimensionVar(vwts,n) -- variable-length weights
-# SUnDimensionFxd(fwts) -- fixed-length weights
+#
+# ** Degeneracies: total dimensions for SU(n), SO(n), and Sp(n) **
+#
+# For number of weights w,
+# SU(n): n = w + 1, SO(2n): n = 2w, SO(2n+1): n = 2w+1, Sp(2n): n = 2w
+#
+# From fixed weights:
+# DegenSUnFxd(fwts) -- SU(n)
+# DegenSO2nFxd(fwts) -- SO(2n)
+# DegenSOnp1Fxd(fwts) -- SO(2n+1)
+# DegenSpnFxd(fwts) -- Sp(n), usually written Sp(2n) with n = w
+#
+# For contracted Young diagrams:
+# DegenSUnCtYoung(yrls,n)
+#
+# Polynomial coefficients, since Python doesn't do computer algebra
+# (list of nmi, den) -- for n, product of (n + nmi) divided by den
+# DegenFacsSUnCtYoung(yrls) -- SU(n)
+# DegenFacsSOnCtYoung(yrls) -- SO(n)
+# DegenFacsSpnCtYoung(yrls) -- Sp(n)
 # 
-# ** SU(n) Representation Products **  implements
-# the Littlewood-Richardson rule for decomposing product representations
-# into irreps.
+# Uses the polynomial-coefficient lists
+# DegenEval(facs, n)
+#
+#
+# ** SU(n) Representation Products **
+# Implements the Littlewood-Richardson rule
+# for decomposing product representations into irreps.
 # 
-# SUnYoungProduct(dgrm1,dgrm2) takes two expanded diagrams 
-# createsa list of expanded product diagrams that are labeled
-# according to the algorithm. 0 = first diagram
-# and 1,2,3,... = rows of second diagram.
+# SUnProductXpYoung(dgrm1,dgrm2) takes two expanded diagrams and
+# creates a list of expanded product diagrams that are labeled
+# by the algorithm.
+# 0 = first diagram and 1,2,3,... = rows of second diagram.
 # 
-# SUnYoungProductVerify(dgrm1,dgrm2,n) does the above,
-# and also finds rep dimensions using SU(n) dimension n (may be symbolic).
-# It then multiplies and adds as appropriate, emitting all the diagrams
-# and dimension values.
-# 
-# SUnCtrtYoungProduct(dgrm1,dgrm2) takes two contracted diagrams
-# and creates a list of {multiplicity, contracted product diagram}.
-# 
-# SUnCtrtYoungProductVerify(dgrm1,dgrm2,n) like earlier verify function
-# 
-# SUnVarWeightProduct(vwt1,vwt2)  like earlier product function,
-# but with variable weights
-# 
-# SUnVarWeightProductVerify(vwt1,vwt2,n) like earlier verify function
-# 
-# SUnFxdWeightProduct(vwt1,vwt2)  like earlier product function,
-# but with variable weights
-# 
-# SUnFxdWeightProductVerify(vwt1,vwt2,n) like earlier verify function
-# 
-# ** SU(n) Vector-Representation Powers ** These are useful
+# SUnProductCtYoung(yrls1,yrls2) with contracted diagrams
+# SUnProductCtYoungCntd(yrls1,yrls2) with a counted result:
+# list of (count, diagram)
+#
+# SUnProductFxd(fwt1,fwt2) with fixed weights
+# SUnProductFxdCntd(fwt1,fwt2) with a counted result
+#
+#
+# ** SU(n) Vector-Representation Powers **
+# These are useful
 # for decomposing by symmetry.
 # 
 # VPFindMultDgrmList(p) decomposes power p of the vector or
@@ -114,13 +117,12 @@
 #
 # ** SU(n) Weyl-Orbit Dimensions ** 
 #
-# SUnWeylOrbitDimensionXpYg(ydgm,n) -- expanded Young
-# SUnWeylOrbitDimensionCtYg(yrls,n) -- contrated Young
-# SUnWeylOrbitDimensionVarWts(vwts,n) -- variable-length weights
-# SUnWeylOrbitDimensionFxdWts(fwts) -- fixed-length weights
+# SUnWeylOrbitDimCtYoung(yrls,n) -- contrated Young
+# SUnWeylOrbitDimFxd(fwts) -- fixed-length weights
 # 
-# ** SU(n) Representation W-Orbit Multiplicities ** finds the multiplicity
-# of each root in an irrep. The rep roots are grouped by Weyl orbits,
+# ** SU(n) Representation W-Orbit Multiplicities **
+# finds the multiplicity of each root in an irrep.
+# The rep roots are grouped by Weyl orbits,
 # which can be labeled by their highest or dominant weights.
 # These multiplicities are the Kostka numbers, which come in Kostka matrices.
 # 
@@ -130,13 +132,15 @@
 #
 # KostkaMatrices(p) finds a list of Kostka matrices for powers from 1 to p.
 #
-# ** SU(n) W-Orbit Products and Powers **
 #
-# SUnWeylOrbitProduct(yrls1,yrls2) takes two contracted Young diagrams,
+# ** SU(n) W-Orbit Products and Powers ** -- NOT VERIFIED
+#
+# SUnWeylOrbitProductCtYoung(yrls1,yrls2) takes two contracted Young diagrams,
 # and finds a list of product Weyl orbits
 # as a list of (multiplicity, contracted Young)
 #
-# ** SU(n) Branching Rules **
+#
+# ** SU(n) Branching Rules ** -- NOT VERIFIED
 #
 # SUnWeylOrbitBranching[n1,n2,maxwts) args n1 of SU(n1), n2 of SU(n2),
 # maxwts of original algebra, SU(n1+n2).
@@ -154,6 +158,7 @@
 # Add to the matrix's entry at that location the indices of each of these YD's.
 #
 # YDDgrmNestings(p) finds a list of YD nesting matrices for powers from 1 to p.
+#
 #
 # ** Schur Functions and Related Ones **
 #
@@ -182,22 +187,21 @@
 # GenYDsOfPower(pwr, nmax) like above, but for general YD's,
 # arranged like in VPFindDgrmListSeq(nmax)
 #
-# SelYDPlethysm[pthsel, pthnmax, sel, nmax) makes
+# SelYDPlethysm(pthsel, pthnmax, sel, nmax) makes
 # Rows of plethysmed ones designated with sel and nmax
 # Columns of plethysmers designed with pthsel and pthmax
 # The designators: selectors of which ones to emit,
 # and maximum order / size / power
 # The selectors:
-# sym -- the YD {nmax}
-# sym all -- the YD's {p} up to p = nmax
-# ats -- the YD {1^nmax}
-# ats all-- the YD's {1^p} up to p = nmax
-# gen -- all the YD's with size nmax
-# gen all -- all the YD's with sizes up to nmax
+# Sym -- the YD {nmax}
+# SymAll -- the YD's {p} up to p = nmax
+# Ats -- the YD {1^nmax}
+# AtsAll-- the YD's {1^p} up to p = nmax
+# Gen -- all the YD's with size nmax
+# GenAll -- all the YD's with sizes up to nmax
 # All these are one-level lists of counted lists of YD's
 # and are {}'d or flattened as necessary
 # Ordering: same as in VPFindDgrmListSeq[]
-#
 #
 #
 # Skipping the graphics, though one could do ASCII art.
@@ -216,33 +220,34 @@
 #
 # Doing tuples as much as possible
 
+
 ###
 ### Data Conversion
 ###
 
 # Expanded Young < - > contracted Young
 
-def ContractYoung(ydgm): return tuple([len(yrow) for yrow in ydgm])
+def ContractYoung(ydgm): return tuple((len(yrow) for yrow in ydgm))
 
 # The function's row and col args are 0-based, not 1-based
 def ExpandYoung(yrls,func=(lambda r,c: None)): 
-	return tuple([ tuple([func(r,c) for c in xrange(yrls[r])]) \
-		for r in xrange(len(yrls))])
+	return tuple(( tuple((func(r,c) for c in range(yrls[r]))) \
+		for r in range(len(yrls))))
 
 # Contracted Young < - > variable weights
 
 def CtYoungToVarWts(yrls):
 	yrlsx = list(yrls) + [0]
-	return tuple([yrlsx[i]-yrlsx[i+1] for i in xrange(len(yrls))])
+	return tuple((yrlsx[i]-yrlsx[i+1] for i in range(len(yrls))))
 
 def VarWtsToCtYoung(vwts):
 	yrls = len(vwts)*[0]
-	for i in xrange(len(vwts)):
-		for j in xrange(i+1):
+	for i in range(len(vwts)):
+		for j in range(i+1):
 			yrls[j] += vwts[i]
 	return tuple(yrls)
 
-# Variable weights < - > fixed weights
+# Variable-length weights < - > fixed-length weights
 
 def FixWeights(vwts,n):
 	wl = len(vwts)
@@ -262,7 +267,7 @@ def VarWeights(fwts):
 	else:
 		return ()
 
-# Expanded Young < - > variable weights
+# Expanded Young < - > variable-length weights
 
 def XpYoungToVarWts(ydgm):
 	return CtYoungToVarWts(ContractYoung(ydgm))
@@ -270,7 +275,7 @@ def XpYoungToVarWts(ydgm):
 def VarWtsToXpYoung(vwts,func=(lambda r,c: None)):
 	return ExpandYoung(VarWtsToCtYoung(vwts),func)
 
-# Contracted Young < - > fixed weights
+# Contracted Young < - > fixed-length weights
 
 def CtYoungToFxdWts(yrls,n):
 	return FixWeights(CtYoungToVarWts(yrls),n)
@@ -278,7 +283,7 @@ def CtYoungToFxdWts(yrls,n):
 def FxdWtsToCtYoung(fwts):
 	return VarWtsToCtYoung(VarWeights(fwts))
 
-# Expanded Young < - > fixed weights
+# Expanded Young < - > fixed-length weights
 
 def XpYoungToFxdWts(ydgm,n):
 	return FixWeights(CtYoungToVarWts(ContractYoung(ydgm)),n)
@@ -291,17 +296,18 @@ def FxdWtsToXpYoung(fwts,func=(lambda r,c: None)):
 ###
 
 def RelabelYoung(ydgm,func=(lambda r,c: None)):
-	return tuple([ tuple([func(r,c) for c in xrange(len(ydgm[r]))]) \
-		for r in xrange(len(ydgm))])
+	return tuple(( tuple((func(r,c) for c in range(len(ydgm[r])))) \
+		for r in range(len(ydgm))))
 
 def TransposeXpYoung(ydgm):
 	n1 = len(ydgm)
+	if n1 == 0: return ()
 	n2 = max(map(len,ydgm))
-	newydgm = [[] for k in xrange(n2)]
-	for i1 in xrange(n1):
-		for i2 in xrange(len(ydgm[i1])):
+	newydgm = [[] for k in range(n2)]
+	for i1 in range(n1):
+		for i2 in range(len(ydgm[i1])):
 			newydgm[i2].append(ydgm[i1][i2])
-	return newydgm
+	return tuple(map(tuple,newydgm))
 
 def TransposeCtYoung(yrls):
 	return ContractYoung(TransposeXpYoung(ExpandYoung(yrls)))
@@ -312,47 +318,123 @@ def FastTpCtYoung(yrls):
 	nyrs = len(yrls)
 	yrlsx = list(yrls) + [0]
 	yrlsx.reverse()
-	yrdf = [yrlsx[i+1] - yrlsx[i] for i in xrange(nyrs)]
+	yrdf = [yrlsx[i+1] - yrlsx[i] for i in range(nyrs)]
 	tpyr = []
-	for i in xrange(nyrs):
+	for i in range(nyrs):
 		tpyr += yrdf[i] * [nyrs-i]
 	return tuple(tpyr)
 
 ###
-### SU(n) Total Dimensions
+### SU(n) SO(2n) SO(2n+1) Sp(2n) Degeneracy: Total Dimensions
 ###
 
-def SUnDimensionFxd(fwts):
-	dimnum = 1
-	dimden = 1
+# Fixed-length weight vectors
+
+def DegenSUnFxd(fwts):
 	wlen = len(fwts)
-	for k in xrange(wlen):
-		for l in xrange(wlen - k):
-			dimnum *= sum(fwts[l:l+k+1]) + k + 1
-			dimden *= k + 1
-	return int(dimnum/dimden)
+	dnum = 1
+	dden = 1
+	for k in range(wlen):
+		dfac = k + 1
+		for l in range(wlen-k):
+			dnum *= sum(fwts[l:l+k+1]) + dfac
+			dden *= dfac
+	return dnum//dden
 
-# For a variable-length weight vector.
-# The total length is assumed to be (n-1)
-# Implementing a symbolic-n version will require implementing
-# a polynomial object.
+def DegenSO2nFxd(fwts):
+	wlen = len(fwts)
+	dnum = DegenSUnFxd(fwts[:-1])
+	dden = 1
+	for k in range(wlen-1):
+		dfac = k + 1
+		dnum *= sum(fwts[-k-2:-2]) + fwts[-1] + dfac
+		dden *= dfac
+		for l in range(1,wlen-k-1):
+			dfac = 2*k + l + 2
+			dnum *= sum(fwts[-k-l-2:-k-2]) + 2*sum(fwts[-k-2:-2]) + \
+				fwts[-2] + fwts[-1] + dfac
+			dden *= dfac
+	return dnum//dden
 
-def SUnDimensionXpYg(ydgm,n):
-	# Put the size in the numerator
-	dgrm = RelabelYoung(ydgm, lambda r,c: n - r + c)
-	dualdgrm = TransposeXpYoung(dgrm)
-	# Hooks are in the denominator
-	dimnum = 1
-	dimden = 1
-	for i1 in xrange(len(dgrm)):
-		for i2 in xrange(len(dgrm[i1])):
-			dimnum *= dgrm[i1][i2]
-			dimden *= (len(dgrm[i1]) - (i2+1)) + (len(dualdgrm[i2]) - (i1+1)) + 1
-	return int(dimnum/dimden)
+def DegenSOnp1Fxd(fwts):
+	wlen = len(fwts)
+	dnum = DegenSUnFxd(fwts)
+	dden = 1
+	for k in range(1,wlen):
+		for l in range(wlen-k):
+			dfac = 2*k + l + 1
+			dnum *= sum(fwts[-k-l-1:-k-1]) + 2*sum(fwts[-k-1:-1]) + \
+				fwts[-1] + dfac
+			dden *= dfac
+	return dnum//dden
 
-def SUnDimensionCtYg(yrls,n): return SUnDimensionXpYg(ExpandYoung(yrls),n)
+def DegenSpnFxd(fwts):
+	wlen = len(fwts)
+	dnum = DegenSUnFxd(fwts)
+	dden = 1
+	for k in range(wlen):
+		for l in range(1,wlen-k):
+			dfac = 2*k + l + 2
+			dnum *= sum(fwts[-k-l-1:-k-1]) + 2*sum(fwts[-k-1:-1]) + \
+				2*fwts[-1] + dfac
+			dden *= dfac
+	return dnum//dden
 
-def SUnDimensionVar(yrls,n): return SUnDimensionXpYg(VarWtsToXpYoung(yrls),n)
+# Contracted Young diagrams
+
+def HookCtYoung(yrls):
+	dual = TransposeCtYoung(yrls)
+	hook = 1
+	for i, yr in enumerate(yrls):
+		for j in range(yr):
+			hook *= 1 + (yrls[i] - i - 1) + (dual[j] - j - 1)
+	return hook
+
+def DegenSUnCtYoung(yrls,n):
+	numer = 1
+	denom = HookCtYoung(yrls)
+	for i, yr in enumerate(yrls):
+		for j in range(yr):
+			numer *= n - i + j
+	return numer//denom
+
+def DegenFacsSUnCtYoung(yrls):
+	numlist = []
+	denom = HookCtYoung(yrls)
+	for i, yr in enumerate(yrls):
+		for j in range(yr):
+			numlist.append(-i+j)
+	numlist.sort()
+	return (tuple(numlist), denom)
+
+def DegenFacsSOSpnCtYoung(yrls,q):
+	yrllen = len(yrls)
+	yrx = lambda i: yrls[i] if i >= 0 and i < yrllen else 0
+	numlist = []
+	denlist = []
+	denom = HookCtYoung(yrls)
+	for i in range(yrllen):
+		for j in range(yrls[i]):
+			numlist.append(-2*i-j+q-2+yrx(i)+yrx(i+j+q))
+		for j in range(0,yrllen-i-yrx(i)-1):
+			numlist.append(-2*i-j+q-2+yrx(i+yrx(i)+j+q))
+			denlist.append(-2*i-j+q-2)
+	# Remove all members of denlist from numlist
+	numlist.sort()
+	for d in denlist:
+		numlist.remove(d)
+	return (tuple(numlist), denom)
+	
+
+def DegenFacsSOnCtYoung(yrls): return DegenFacsSOSpnCtYoung(yrls,0)
+def DegenFacsSpnCtYoung(yrls): return DegenFacsSOSpnCtYoung(yrls,1)
+
+def DegenEval(facs, n):
+	numlist, denom = facs
+	numer = 1
+	for nf in numlist:
+		numer *= n + nf
+	return numer//denom
 
 ###
 ### SU(n) Representation Products
@@ -364,7 +446,7 @@ def SUnDimensionVar(yrls,n): return SUnDimensionXpYg(VarWtsToXpYoung(yrls),n)
 # They assume lists, not tuples
 # Keep in mind 0-based and not 1-based indexing
 
-def clipempty(dgrm):
+def ClipEmpty(dgrm):
 	newdgrm = dgrm
 	for k, drow in enumerate(dgrm):
 		if len(drow) == 0:
@@ -376,7 +458,7 @@ def SUnAddOneToYoung(dgrm, token, start):
 	# token must be absent from the original diagram
 	olddgrm = dgrm + [[]]
 	outlist = []
-	for k in xrange(start,len(olddgrm)):
+	for k in range(start,len(olddgrm)):
 		# Explicit copy to avoid inadvertently adding to the lists
 		# inside a diagram list.
 		# Unlike Mathematica, Python does not have automatic copy-on-write
@@ -388,21 +470,21 @@ def SUnAddOneToYoung(dgrm, token, start):
 		else:
 			apnd = True
 		if apnd:
-			for l in xrange(k):
+			for l in range(k):
 				if newdgrm[l][ndlen-1] == token:
 					apnd = False
 					break
 		if apnd:
 			outlist.append((newdgrm,k))
 	
-	outlist = [(clipempty(outmem[0]), outmem[1]) for outmem in outlist]
+	outlist = [(ClipEmpty(outmem[0]), outmem[1]) for outmem in outlist]
 	return outlist
 
 def SUnAddSetToYoung(dgrm,token,number):
 	# token must be absent from the original diagram
 	outlist = [(dgrm,0)]
 	oldlist = outlist[:]
-	for k in xrange(number):
+	for k in range(number):
 		outlist = []
 		for oldmem in oldlist:
 			outlist += SUnAddOneToYoung(oldmem[0],token,oldmem[1])
@@ -415,11 +497,11 @@ def SUnAddSetToYoung(dgrm,token,number):
 # Works with expanded diagrams; returns a set of expanded diagrams
 # with boxes labeled as a result of the algorithm.
 # 0 is first diagram and 1 2 3 are the rows of the second diagram.
-def SUnYoungProduct(dgrm1,dgrm2):
+def SUnProductXpYoung(dgrm1,dgrm2):
 	# Be sure to keep all the tokens distinct;
 	# 0 for the original diagram is distinct from
 	# 1, 2, ... for the added one.
-	fxddgrm = RelabelYoung(clipempty(dgrm1), lambda r,c: 0)
+	fxddgrm = RelabelYoung(ClipEmpty(dgrm1), lambda r,c: 0)
 	
 	# Be sure that the the original diagram is all-list
 	oldlist = [[list(fxddgrow) for fxddgrow in fxddgrm]]
@@ -445,67 +527,35 @@ def SUnYoungProduct(dgrm1,dgrm2):
 		if apnd: outlist.append(dgx)
 	
 	# Don't need to be lists anymore
-	return tuple([tuple([tuple(dgrow) for dgrow in dgx]) for dgx in outlist])
+	return tuple((tuple((tuple(dgrow) for dgrow in dgx)) for dgx in outlist))
 
-def SUnYoungProductVerify(dgrm1,dgrm2,n):
-	prod = SUnYoungProduct(dgrm1,dgrm2)
-	origdims = tuple([(dgrm, SUnDimensionXpYg(dgrm,n)) for dgrm in (dgrm1,dgrm2)])
-	proddims = tuple([(dgrm, SUnDimensionXpYg(dgrm,n)) for dgrm in prod])
-	origlen = 1
-	for mem in origdims: origlen *= mem[1]
-	prodlen = 0
-	for mem in proddims: prodlen += mem[1]
-	return ((origdims,proddims),(origlen,prodlen))
+# Like the above, but with contracted diagrams
+def SUnProductCtYoung(yrls1,yrls2):
+	dgrm1 = ExpandYoung(yrls1)
+	dgrm2 = ExpandYoung(yrls2)
+	prod = SUnProductXpYoung(dgrm1,dgrm2)
+	return tuple((ContractYoung(dgrm) for dgrm in prod))
 
-def countedset(lst):
+def CountedSet(lst):
 	cnt = {}
 	for mem in lst:
 		if mem not in cnt: cnt[mem] = 0
 		cnt[mem] += 1
-	ulst = cnt.keys()
-	ulst.sort()
-	return tuple([(cnt[mem],mem) for mem in ulst])
+	return tuple(((cnt[mem],mem) for mem in sorted(cnt.keys())))
 
-def SUnCtrtYoungProduct(yrls1,yrls2):
-	res = SUnYoungProduct(ExpandYoung(yrls1),ExpandYoung(yrls2))
-	return countedset(map(ContractYoung,res))
+def SUnProductCtYoungCntd(yrls1,yrls2):
+	return CountedSet(SUnProductCtYoung(yrls1,yrls2))
 
-def SUnOtherProductVerify(dgrm1,dgrm2,n,prodfunc,dimfunc):
-	prod = prodfunc(dgrm1,dgrm2)
-	origdims = tuple([(dgrm, dimfunc(dgrm,n)) for dgrm in (dgrm1,dgrm2)])
-	proddims = tuple([(mult, dgrm, dimfunc(dgrm,n)) for mult, dgrm in prod])
-	origlen = 1
-	for mem in origdims: origlen *= mem[1]
-	prodlen = 0
-	for mem in proddims: prodlen += mem[0]*mem[2]
-	return ((origdims,proddims),(origlen,prodlen))
-
-def SUnCtrtYoungProductVerify(dgrm1,dgrm2,n):
-	return SUnOtherProductVerify(dgrm1,dgrm2,n,SUnCtrtYoungProduct,SUnDimensionCtYg)
-
-def SUnVarWeightProduct(vwt1,vwt2):
-	res = SUnYoungProduct(VarWtsToXpYoung(vwt1),VarWtsToXpYoung(vwt2))
-	return countedset(map(XpYoungToVarWts,res))
-
-def SUnVarWeightProductVerify(dgrm1,dgrm2,n):
-	return SUnOtherProductVerify(dgrm1,dgrm2,n,SUnVarWeightProduct,SUnDimensionVar)
-
-def SUnFxdWeightProduct(fwt1,fwt2):
+def SUnProductFxd(fwt1,fwt2):
 	nf = len(fwt1)
 	if len(fwt2) != nf: return None
-	res = SUnYoungProduct(FxdWtsToXpYoung(fwt1),FxdWtsToXpYoung(fwt2))
-	clst = countedset(map(lambda dg: XpYoungToFxdWts(dg,nf+1),res))
-	return filter(lambda mem: mem[1] != None, clst)
+	ydgm1 = FxdWtsToXpYoung(fwt1)
+	ydgm2 = FxdWtsToXpYoung(fwt2)
+	res = SUnProductXpYoung(ydgm1,ydgm2)
+	return tuple((XpYoungToFxdWts(dgrm,nf+1) for dgrm in res if len(dgrm) <= nf+1))
 
-def SUnFxdWeightProductVerify(dgrm1,dgrm2):
-	prod = SUnFxdWeightProduct(dgrm1,dgrm2)
-	origdims = tuple([(dgrm, SUnDimensionFxd(dgrm)) for dgrm in (dgrm1,dgrm2)])
-	proddims = tuple([(mult, dgrm, SUnDimensionFxd(dgrm)) for mult, dgrm in prod])
-	origlen = 1
-	for mem in origdims: origlen *= mem[1]
-	prodlen = 0
-	for mem in proddims: prodlen += mem[0]*mem[2]
-	return ((origdims,proddims),(origlen,prodlen))
+def SUnProductFxdCntd(fwt1,fwt2):
+	return CountedSet(SUnProductFxd(fwt1,fwt2))
 
 ###
 ### SU(n) Vector-Representation Powers
@@ -516,7 +566,7 @@ def VPYoungAddOne(ylst):
 	ylnew = list(ylst)
 	ylnew[0] += 1
 	ylnl.append(tuple(ylnew))
-	for i in xrange(len(ylst)-1):
+	for i in range(len(ylst)-1):
 		if ylst[i] > ylst[i+1]:
 			ylnew = list(ylst)
 			ylnew[i+1] += 1
@@ -528,7 +578,7 @@ def VPYoungAddOne(ylst):
 
 def VPYoungSubtractOne(ylst):
 	ylnl = []
-	for i in xrange(len(ylst)-1):
+	for i in range(len(ylst)-1):
 		if ylst[i] > ylst[i+1]:
 			ylnew = list(ylst)
 			ylnew[i] -= 1
@@ -567,99 +617,47 @@ def VPFindMultDgrmList(p):
 			VPMultDgrmListCache.append(((1,(1,)),))
 		
 		numrem = p - len(VPMultDgrmListCache)
-		for i in xrange(numrem):
+		for i in range(numrem):
 			nxtlst = VPFindNextDgrmList(VPMultDgrmListCache[-1])
 			VPMultDgrmListCache.append(nxtlst)
 	
 	return VPMultDgrmListCache[p-1]
 
 def VPFindMultDgrmListSeq(p):
-	return tuple([VPFindMultDgrmList(ip) for ip in xrange(1,p+1)])
+	return tuple((VPFindMultDgrmList(ip) for ip in range(1,p+1)))
 
 def VPFindDgrmList(p):
-	return tuple([ndg[1] for ndg in VPFindMultDgrmList(p)])
+	return tuple((ndg[1] for ndg in VPFindMultDgrmList(p)))
 
 def VPFindDgrmListSeq(p):
-	return tuple([VPFindDgrmList(ip) for ip in xrange(1,p+1)])
-
-
-# Verify that they are in the proper order -- add to earlier row length,
-# subtract that amount from later row length
-# should give an earlier diagram, and only an earlier one.
-def VPVerifyDgrmListOrdering(p):
-	dglst = VPFindDgrmList(p)
-	# Set up indexing
-	dgidx = {}
-	for i,dg in enumerate(dglst):
-		dgidx[dg] = i
-	# Shoot backwards
-	for i,dg in enumerate(dglst):
-		for j1 in xrange(len(dg)-1):
-			for j2 in xrange(j1+1,len(dg)):
-				for k in xrange(1,dg[j2]+1):
-					dgb = list(dg)
-					dgb[j1] += k
-					dgb[j2] -= k
-					dgb.sort()
-					dgb.reverse()
-					if dgb[-1] == 0: del dgb[-1]
-					dgb = tuple(dgb)
-					ix = dgidx[dgb]
-					if ix >= i: return False
-	return True
-
-# Should make a list of True's
-def VPOrderVerify(p):
-	return [VPVerifyDgrmListOrdering(ip) for ip in xrange(1,p+1)]
-
-# Verify total sizes for each level
-def VPVerifyDgrmListSize(p,n):
-	dglst = VPFindMultDgrmList(p)
-	total = 0
-	for num,dg in dglst:
-		total += num*SUnDimensionCtYg(dg,n)
-	total -= n**p
-	return int(total)
-
-# Should make a list of 0' s
-def VPSizeVerify(p,n):
-	return [VPVerifyDgrmListSize(ip,n) for ip in xrange(1,p+1)]
-
+	return tuple((VPFindDgrmList(ip) for ip in range(1,p+1)))
 
 ###
 ### SU(n) Weyl-Orbit Dimensions
 ###
 
-# Denominator for count of permutations.
-def countedsetfctprod(yrls):
+# Denominator for count of permutations
+def CountedSetFCTPRod(yrls):
 	cnt = {}
 	for yrl in yrls:
 		if yrl not in cnt: cnt[yrl] = 0
 		cnt[yrl] += 1
 	prod = 1
 	for n in cnt.values():
-		for k in xrange(1,n+1,1):
+		for k in range(1,n+1,1):
 			prod *= k
 	return prod
 
-# Contracted and expanded Young, variable and fixed weights,
-# n is total length of SU(n).
+# Dimension of Weyl orbit: contracted Young and fixed-length weights
 
-def SUnWeylOrbitDimensionCtYg(yrls,n):
+def SUnWeylOrbitDimCtYoung(yrls,n):
 	prod = 1
-	for k in xrange(len(yrls)):
+	for k in range(len(yrls)):
 		prod *= (n-k)
-	prod /= countedsetfctprod(yrls)
-	return prod
+	return prod//CountedSetFCTPRod(yrls)
 
-def SUnWeylOrbitDimensionXpYg(ydgm,n):
-	return SUnWeylOrbitDimensionCtYg(ContractYoung(ydgm),n)
-
-def SUnWeylOrbitDimensionVarWts(vwts,n):
-	return SUnWeylOrbitDimensionCtYg(VarWtsToCtYoung(vwts),n)
-
-def SUnWeylOrbitDimensionFxdWts(fwts):
-	return SUnWeylOrbitDimensionCtYg(FxdWtsToCtYoung(fwts),len(fwts)+1)
+def SUnWeylOrbitDimFxd(fwts):
+	return SUnWeylOrbitDimCtYoung(FxdWtsToCtYoung(fwts),len(fwts)+1)
 
 ###
 ### SU(n) Representation W-Orbit Multiplicities
@@ -674,14 +672,14 @@ def KostkaMatrix(p):
 		dgix[dg] = i
 	# Find "C" lookback matrix and "g" denominator factor
 	# Multiply by 2 to avoid fractions
-	lookback = [dglen*[0] for i in xrange(dglen)]
+	lookback = [dglen*[0] for i in range(dglen)]
 	denfac = dglen*[0]
 	for i,dg in enumerate(dgrms):
 		dgl = len(dg)
 		# Do lookback; the += takes care of the multiplicities automatically.
-		for j in xrange(dgl-1):
-			for jx in xrange(j+1,dgl):
-				for k in xrange(1,dg[jx]+1):
+		for j in range(dgl-1):
+			for jx in range(j+1,dgl):
+				for k in range(1,dg[jx]+1):
 					dgx = list(dg)
 					dgx[j] += k
 					dgx[jx] -= k
@@ -697,39 +695,21 @@ def KostkaMatrix(p):
 		for j,d in enumerate(dg):
 			dfsum += d*(d - 2*(j+1))
 		denfac[i] = dfsum
-	kostka = [dglen*[0] for i in xrange(dglen)]
-	for i in xrange(dglen):
+	kostka = [dglen*[0] for i in range(dglen)]
+	for i in range(dglen):
 		kkrow = kostka[i]
 		kkrow[i] = 1
-		for j in xrange(i+1,dglen):
+		for j in range(i+1,dglen):
 			kknum = 0
 			lbrow = lookback[j]
-			for k in xrange(i,j):
+			for k in range(i,j):
 				kknum += lbrow[k]*kkrow[k]
 			if kknum != 0:
 				kkrow[j] = kknum/(denfac[i] - denfac[j])
 	return tuple(map(tuple,kostka))
 
 def KostkaMatrices(p):
-	return tuple([KostkaMatrix(ip) for ip in xrange(1,p+1)])
-
-def KostkaMatrixVerify(p,n):
-	diffs = []
-	for ip in xrange(1,p+1):
-		vpds = VPFindDgrmList(ip)
-		kostka = KostkaMatrix(ip)
-		tgtlens = [SUnDimensionCtYg(vpd,n) for vpd in vpds]
-		indlens = [SUnWeylOrbitDimensionCtYg(vpd,n) for vpd in vpds]
-		vpdlen = len(vpds)
-		diff = vpdlen*[0]
-		for j in xrange(vpdlen):
-			kkrow = kostka[j]
-			iksum = 0
-			for k in xrange(vpdlen):
-				iksum += kkrow[k]*indlens[k]
-			diff[j] = tgtlens[j] - iksum
-		diffs.append(tuple(map(int,diff)))
-	return tuple(diffs)
+	return tuple((KostkaMatrix(ip) for ip in range(1,p+1)))
 
 ###
 ### SU(n) W-Orbit Products
@@ -842,13 +822,13 @@ def permutations(lst):
 	if n <= 1: return set([lst])
 	# For more, do it recursively. Stack depth: about n
 	plst = set()
-	for k in xrange(n):
+	for k in range(n):
 		ps = permutations(lst[:k] + lst[k+1:])
 		lmlst = lst[k:k+1]
 		plst = plst.union(map(lambda lm: lmlst+lm, ps))
 	return plst
 
-def SUnWeylOrbitProduct(yrls1,yrls2):
+def SUnWeylOrbitProductCtYoung(yrls1,yrls2):
 	ys1 = tuple(yrls1)
 	ys2 = tuple(yrls2)
 	n1 = len(ys1)
@@ -865,43 +845,43 @@ def SUnWeylOrbitProduct(yrls1,yrls2):
 			if len(ls21) == len(ls11):
 				px = ls21
 				for p in ps:
-					pz = zip(p,px)
+					pz = list(zip(p,px))
 					pz.sort()
 					lsrs.add((tuple(pz),ls12,ls22))
 	
 	lsrres = {}
 	for lsr0,lsr1,lsr2 in lsrs:
-		lsrnew = [r0+r1 for r0,r1 in lsr0]
+		lsr0s = [r0+r1 for r0,r1 in lsr0]
+		lsrnew = lsr0s
 		lsrnew += list(lsr1)
 		lsrnew += list(lsr2)
 		lsrnew.sort()
 		lsrnew.reverse()
 		lsrnew = tuple(lsrnew)
-		num = countedsetfctprod(lsrnew)
-		num /= countedsetfctprod(lsr0)
-		num /= countedsetfctprod(lsr1)
-		num /= countedsetfctprod(lsr2)
+		num = CountedSetFCTPRod(lsrnew)
+		num /= CountedSetFCTPRod(lsr0s)
+		num /= CountedSetFCTPRod(lsr1)
+		num /= CountedSetFCTPRod(lsr2)
 		num = int(num)
 		if lsrnew not in lsrres:
 			lsrres[lsrnew] = 0
 		lsrres[lsrnew] += num
 	lsrlst = lsrres.keys()
-	lsrlst.sort()
-	lsrlst.reverse()
-	lsrout = [(lsrres[lsr], lsr) for lsr in lsrlst]
+	lsrout = [(lsrres[lsr], lsr) for lsr in sorted(lsrlst,reverse=True)]
 	return tuple(lsrout)
 
-def SUnWeylOrbitProductVerify(yrls1,yrls2,n):
-	prod = SUnWeylOrbitProduct(yrls1,yrls2)
-	sums1 = [SUnWeylOrbitDimensionCtYg(yr,n) for yr in (yrls1,yrls2)]
-	sums2 = [num*SUnWeylOrbitDimensionCtYg(yr,n) for num,yr in prod]
-	return int(sums1[0]*sums1[1] - sum(sums2))
+# Test Weyl-orbit products
+def SUnWeylOrbitProductCtYoungVerify(yrls1,yrls2,n):
+	prod = SUnWeylOrbitProductCtYoung(yrls1,yrls2)
+	sums1 = [SUnWeylOrbitDimCtYoung(yr,n) for yr in (yrls1,yrls2)]
+	sums2 = [num*SUnWeylOrbitDimCtYoung(yr,n) for num,yr in prod]
+	return sums1[0]*sums1[1] - sum(sums2)
 
 # Decomposes the square into symmetric and antisymmetric parts
 
 def SUnWeylOrbitSquare(yrls):
-	prod = SUnWeylOrbitProduct(yrls,yrls)
-	yr2 = tuple([2*yr for yr in yrls])
+	prod = SUnWeylOrbitProductCtYoung(yrls,yrls)
+	yr2 = tuple((2*yr for yr in yrls))
 	sym = []
 	ats = []
 	for pe in prod:
@@ -955,9 +935,9 @@ def YDDgrmNesting(p):
 	for i,dgrm in enumerate(dgrms):
 		dgix[dgrm] = i
 	
-	nesting = [[[] for j in xrange(dglen)] for i in xrange(dglen)]
+	nesting = [[[] for j in range(dglen)] for i in range(dglen)]
 	for i,dgrm in enumerate(dgrms):
-		subdgrms = map(VPFindDgrmList,dgrm)
+		subdgrms = list(map(VPFindDgrmList,dgrm))
 		dgxp = multlstsel([range(len(dm)) for dm in subdgrms])	
 		for dgxpm in dgxp:
 			insdg = []
@@ -971,7 +951,7 @@ def YDDgrmNesting(p):
 	return tuple(map(lambda m: tuple(map(tuple,m)) ,nesting))
 
 def YDDgrmNestings(p):
-	return tuple([YDDgrmNesting(ip) for ip in xrange(1,p+1)])
+	return tuple((YDDgrmNesting(ip) for ip in range(1,p+1)))
 
 ###
 ### Schur Functions and Related Ones
@@ -979,7 +959,7 @@ def YDDgrmNestings(p):
 
 ### Symmetric-Group Characters
 
-def trimzeros(x): return tuple([xm for xm in x if xm > 0])
+def trimzeros(x): return tuple((xm for xm in x if xm > 0))
 
 # If "verify" is set on, then it will remove every row in a conjugacy class
 # and compare the results, instead of removing only one
@@ -1005,21 +985,21 @@ def SymmGroupCharacters(p, verify=False):
 		sgch = []
 		for j,vpdirp in enumerate(vpds):
 			vptrirp = FastTpCtYoung(vpdirp)
-			dhset = [[] for ix in xrange(i+1)]
+			dhset = [[] for ix in range(i+1)]
 			
-			for k in xrange(len(vpdirp)):
-				for l in xrange(vpdirp[k]):
+			for k in range(len(vpdirp)):
+				for l in range(vpdirp[k]):
 					# Hook sign and length
 					hksgn = (-1)**(vptrirp[l]-k-1)
 					hklen = (vpdirp[k]-l-1) + (vptrirp[l]-k-1) + 1
 					# The top and left of the dehooked diagram
 					dehooked = list(vpdirp)
-					for m in xrange(k,vptrirp[l]):
+					for m in range(k,vptrirp[l]):
 						dehooked[m] = min(dehooked[m],l)
 					# The bottom and right of the dehooked diagram
-					dhkxtra = [vpdirp[m]-l-1 for m in xrange(k+1,vptrirp[l])]
+					dhkxtra = [vpdirp[m]-l-1 for m in range(k+1,vptrirp[l])]
 					# Slide the bottom right into the top left
-					for m in xrange(len(dhkxtra)):
+					for m in range(len(dhkxtra)):
 						dehooked[k+m] += dhkxtra[m]
 					# Finally...
 					dehooked = trimzeros(dehooked)
@@ -1032,7 +1012,7 @@ def SymmGroupCharacters(p, verify=False):
 				vdimax = len(vpdcls) if verify else min(len(vpdcls),1)
 				# Make a list of results for all the deletions
 				chtrial = []
-				for l in xrange(vdimax):
+				for l in range(vdimax):
 					rwlen = vpdcls[l]
 					vpclred = tuple(list(vpdcls[:l]) + list(vpdcls[l+1:]))
 					vpcrix = vpdix[vpclred]
@@ -1049,13 +1029,13 @@ def SymmGroupCharacters(p, verify=False):
 				
 				if verify and len(chtrial) > 1:
 					AllEqual = True
-					for l in xrange(len(chtrial)-1):
+					for l in range(len(chtrial)-1):
 						if chtrial[l] != chtrial[l+1]:
 							AllEqual = False
 							IsCorrect = False
 							break
 					if not AllEqual:
-						print i, j, k, "--", chtrial
+						print(i, j, k, "--", chtrial)
 				
 				chtrval = chtrial[0] if len(chtrial) > 0 else 0
 				sgchrow.append(chtrval)
@@ -1070,7 +1050,7 @@ def SymmGroupCharacters(p, verify=False):
 # Power sum to sum of Schur functions, expressed to YD's.
 
 def PowerSumToYDs(n):
-	return tuple([((-1)**k, tuple([n-k] + k*[1])) for k in xrange(n)])
+	return tuple((((-1)**k, tuple([n-k] + k*[1])) for k in range(n)))
 
 # Caching of YD products:
 
@@ -1081,7 +1061,7 @@ def GetYDProduct(yd1,yd2):
 	prodkey.sort()
 	prodkey = tuple(prodkey)
 	if prodkey not in CacheYDProduct:
-		CacheYDProduct[prodkey] = SUnCtrtYoungProduct(yd1,yd2)
+		CacheYDProduct[prodkey] = SUnProductCtYoungCntd(yd1,yd2)
 	return CacheYDProduct[prodkey]
 
 # Operations on counted lists of YD's
@@ -1089,18 +1069,16 @@ def GetYDProduct(yd1,yd2):
 def CountedYDListZero(): return ()
 
 def CountedYDListScalMult(sclr,cydl):
-	return tuple([(sclr*cyd[0],cyd[1]) for cyd in cydl]) if sclr != 0 \
+	return tuple(((sclr*cyd[0],cyd[1]) for cyd in cydl)) if sclr != 0 \
 		else CountedYDListZero()
 
 def CountedYDListScalDiv(sclr,cydl):
-	return tuple([(cyd[0]/sclr,cyd[1]) for cyd in cydl]) if sclr != 0 \
+	return tuple(((cyd[0]/sclr,cyd[1]) for cyd in cydl)) if sclr != 0 \
 		else CountedYDListZero()
 
 def CountedListMake(vpdix):
 	yds = vpdix.keys()
-	yds.sort()
-	yds.reverse()
-	return tuple([(vpdix[yd],yd) for yd in yds if vpdix[yd] != 0])
+	return tuple(((vpdix[yd],yd) for yd in sorted(yds,reverse=True) if vpdix[yd] != 0))
 
 def CountedYDListAddList(cydllist):
 	vpdix = {}
@@ -1138,9 +1116,9 @@ def SymYDsFromPowers(sym,PwrFuncList):
 	
 	nmax = len(PwrFuncList)
 	splst = []
-	for n in xrange(1,nmax+1):
+	for n in range(1,nmax+1):
 		spdlist = []
-		for p in xrange(1,n):
+		for p in range(1,n):
 			prod = MultOp(PwrFuncList[p-1],splst[n-p-1])
 			if sym < 0:
 				prod = ScalMultOp((-1)**(p-1),prod)
@@ -1160,7 +1138,7 @@ def SymYDsFromPowers(sym,PwrFuncList):
 # Args are that power, the symmetry, and the maximum symmetric-diagram order.
 # Coefficients are all +1 0 -1
 def SymYDsOfPower(pwr,sym,nmax):
-	PFL = [PowerSumToYDs(pwr*p) for p in xrange(1,nmax+1)]
+	PFL = [PowerSumToYDs(pwr*p) for p in range(1,nmax+1)]
 	return SymYDsFromPowers(sym,PFL)
 
 
@@ -1177,7 +1155,7 @@ def AddRHToDgrm(dgrm,hlen):
 	itdgrm = list(dgrm)
 	rhil = 0
 	sgn = 1
-	for i in xrange(len(dgrm)):
+	for i in range(len(dgrm)):
 		if i == 0:
 			itdgrm[i] += 1
 			rhil += 1
@@ -1200,7 +1178,7 @@ def RHSymYDsOfPower(pwr,sym,nmax):
 	res = []
 	if nmax >= 1:
 		res.append(PowerSumToYDs(pwr))
-		for i in xrange(1,nmax):
+		for i in range(1,nmax):
 			res.append(AddRHToDcls(res[-1],pwr))
 	
 	if sym < 0:
@@ -1272,7 +1250,7 @@ def AddVectorToMatrixIfLinIndep(mat,mtixs,vec):
 		if xgcd != 0:
 			x0 /= xgcd
 			x1 /= xgcd
-			for j in xrange(2*vlen):
+			for j in range(2*vlen):
 				nvc[j] = x0*nvc[j] - x1*nmln[j]
 		
 	# Accept it?
@@ -1287,7 +1265,7 @@ def AddVectorToMatrixIfLinIndep(mat,mtixs,vec):
 		if xgcd != 0:
 			x0 /= xgcd
 			x1 /= xgcd
-			for j in xrange(2*vlen):
+			for j in range(2*vlen):
 				nmln[j] = x1*nmln[j] - x0*nvc[j]
 	
 	# Append the new row
@@ -1299,17 +1277,17 @@ def AddVectorToMatrixIfLinIndep(mat,mtixs,vec):
 	# Normalize by dividing by the gcd
 	for mln in mat:
 		g = GCDList(mln)
-		for i in xrange(len(mln)):
+		for i in range(len(mln)):
 			mln[i] /= g
 		
 	return True
 
 def FindScaledInverse(mat,mtixs,vlen):
 	midg = vlen*[0]
-	miscld = [vlen*[0] for i in xrange(vlen)]
-	for i in xrange(vlen):
+	miscld = [vlen*[0] for i in range(vlen)]
+	for i in range(vlen):
 		midg[mtixs[i]] = mat[i][mtixs[i]]
-		for j in xrange(vlen):
+		for j in range(vlen):
 			miscld[mtixs[i]][j] = mat[i][vlen+j]
 	
 	midg = tuple(midg)
@@ -1329,7 +1307,7 @@ def YDSymGenProdsToGenYDs(pwr):
 	for i,dgrm in enumerate(dgrms):
 		dgix[dgrm] = i
 	bkdgix = {}
-	for i in xrange(pwr):
+	for i in range(pwr):
 		for j,dgrm in enumerate(dgrmlist[i]):
 			bkdgix[dgrm] = (i,j)
 	
@@ -1350,7 +1328,7 @@ def YDSymGenProdsToGenYDs(pwr):
 				prods.append((pwr-p-1,bkdgix[dgrm]))
 				symctrbs.append(smcf)
 	
-	invmat = FindScaledInverse(xfrmat,xfmtixs,len(xfrmat[0])/2) \
+	invmat = FindScaledInverse(xfrmat,xfmtixs,len(xfrmat[0])//2) \
 		if len(xfrmat) > 0 else ()
 	return (prods,symctrbs,invmat)
 
@@ -1367,7 +1345,7 @@ def SymYDsToGenYDsFunct(SymFuncList):
 	
 	pwr = len(SymFuncList)
 	dgrmlist = []
-	for p in xrange(pwr):
+	for p in range(pwr):
 		yspg = YDSymGenProdsToGenYDs(p+1)
 		prds = yspg[0]
 		scts = yspg[1]
@@ -1384,7 +1362,7 @@ def SymYDsToGenYDsFunct(SymFuncList):
 		if len(imts) > 0:
 			imtsml = imts[0]
 			imtsmt = imts[1]
-			for i in xrange(len(prds)):
+			for i in range(len(prds)):
 				imd = imtsml[i]
 				imt = imtsmt[i]
 				pdvlst = [ScalMultOp(imt[j],pdv) for j,pdv in enumerate(pdvs)]
@@ -1399,17 +1377,17 @@ def GenYDsFromPowers(PwrFuncList):
 
 # General YD's of powers: in Schur functions, S(a,x^p) = sum of S(b,x)'s
 def GenYDsOfPower(pwr,nmax):
-	PFL = [PowerSumToYDs(pwr*p) for p in xrange(1,nmax+1)]
+	PFL = [PowerSumToYDs(pwr*p) for p in range(1,nmax+1)]
 	return GenYDsFromPowers(PFL)
 
 # Select which one desired:
 #
-# last symmetric -- "sym"
-# all symmetric -- "sym all"
-# last antisymmetric -- "ats"
-# all antisymmetric -- "ats all"
-# last set of general -- "gen"
-# all sets of general -- "gen all"
+# last symmetric -- "Sym"
+# all symmetric -- "SymAll"
+# last antisymmetric -- "Ats"
+# all antisymmetric -- "AtsAll"
+# last set of general -- "Gen"
+# all sets of general -- "GenAll"
 #
 # All results as single-level lists,
 # making or flattening result lists if necessary
@@ -1417,20 +1395,20 @@ def GenYDsOfPower(pwr,nmax):
 # Necessary for plethysm code to control how much one wants to calculate.
 
 def SelYDsFunction(sel,PwrFuncList):
-	if sel == "sym":
+	if sel == "Sym":
 		res = SymYDsFromPowers(1,PwrFuncList)
 		res = [res[-1]]
-	elif sel == "sym all":
+	elif sel == "SymAll":
 		res = SymYDsFromPowers(1,PwrFuncList)
-	elif sel == "ats":
+	elif sel == "Ats":
 		res = SymYDsFromPowers(-1,PwrFuncList)
 		res = [res[-1]]
-	elif sel == "ats all":
+	elif sel == "AtsAll":
 		res = SymYDsFromPowers(-1,PwrFuncList)
-	elif sel == "gen":
+	elif sel == "Gen":
 		res = GenYDsFromPowers(PwrFuncList)
 		res = res[-1]
-	elif sel == "gen all":
+	elif sel == "GenAll":
 		res = GenYDsFromPowers(PwrFuncList)
 		rsx = []
 		for r in res: rsx += r
@@ -1440,7 +1418,7 @@ def SelYDsFunction(sel,PwrFuncList):
 	return tuple(res)
 
 def SelYDsOfPower(sel,pwr,nmax):
-	PFL = [PowerSumToYDs(pwr*p) for p in xrange(1,nmax+1)]
+	PFL = [PowerSumToYDs(pwr*p) for p in range(1,nmax+1)]
 	return SelYDsFunction(sel,PFL)
 	
 # Selection and max order of plathysmer,
@@ -1450,10 +1428,10 @@ def SelYDsOfPower(sel,pwr,nmax):
 # In each cell is counted list of YD's
 
 def SelYDPlethysm(pthsel,pthnmax,sel,nmax):
-	PFLArr = [SelYDsOfPower(sel,p,nmax) for p in xrange(1,pthnmax+1)]
+	PFLArr = [SelYDsOfPower(sel,p,nmax) for p in range(1,pthnmax+1)]
 	d1 = len(PFLArr); d2 = len(PFLArr[0])
-	PFLATr = [[PFLArr[j][i] for j in xrange(d1)] for i in xrange(d2)]
-	return tuple([SelYDsFunction(pthsel,PFL) for PFL in PFLATr])
+	PFLATr = [[PFLArr[j][i] for j in range(d1)] for i in range(d2)]
+	return tuple((SelYDsFunction(pthsel,PFL) for PFL in PFLATr))
 
 # Analogue to
 #
@@ -1468,3 +1446,5 @@ def SelYDPlethysm(pthsel,pthnmax,sel,nmax):
 # multiplicity p (i) of row length i
 #
 # Power sum -> plethysm of power sum
+
+	
