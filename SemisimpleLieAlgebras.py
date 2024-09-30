@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!python3
 #
 # Does calculations for semisimple Lie algebras
 # Port of Mathematica notebook Semisimple Lie Algebras.nb
@@ -60,6 +60,11 @@
 # Original code for getting a rep:
 # GetRepDirect(latype, maxwts)
 #
+# Weyl-group order
+# By group theory, every Weyl orbit must have a size that divides this order
+#
+# WeylGroupOrder(latype)
+#
 # For a Weyl orbit, emits the root vectors and weight vectors.
 # maxwts is the dominant weights of the orbit,
 # analogous to the highest weights of an irrep.
@@ -84,6 +89,18 @@
 #   A tuple of (modulus/divisor, conserved qty)
 # Conserved quantities are the same for all the members of a representation,
 # and they are modulo additive for product reps
+#
+# RepReality(latype, maxwts):
+# - Real (self-conjugate, even height): 0
+# - Pseudoreal (self-conjugate, odd height): 1
+# - Complex: (unequal to conjugate): -1
+#
+# RepConjugate(latype, maxwts):
+# Returns the conjugate of the rep (different for A2 on up, D2 on up, E6)
+#
+# RepConjugateD4(maxwts, perm):
+# Rearranges the end roots of D4 / SO(8)
+# with permutation "perm": some permutation of (1,2,3)
 #
 # Casimir invariant:
 # CasimirInvariant(latype, maxwts)
@@ -344,14 +361,14 @@
 # subalgebra #ix of brancher ld0 gets branched by ld1,
 # making a combined brancher.
 #
-# BrancherRenameA1B1C1(ld0, ix, newfam)
+# BrancherRenameABC1(ld0, ix, newfam)
 # subalgebra #ix of brancher ld0 gets a new family number
 # if it's A(1), B(1), or C(1): 1, 2, 3
 #
-# BrancherRenameB2C2(ld0, ix)
+# BrancherRenameBC2(ld0, ix)
 # subalgebra #ix of brancher ld0 gets flipped between B(2) and C(2)
 #
-# BrancherRenameA3D3(ld0, ix)
+# BrancherRenameAD3(ld0, ix)
 # subalgebra #ix of brancher ld0 gets flipped between A(3) and D(3)
 #
 # BrancherSplitD2(ld0, ix)
@@ -397,15 +414,19 @@
 #
 # Bignums are part of Python integers
 # Rational numbers are the Fraction class
-from fractions import Fraction, gcd
+
+from math import gcd
+from itertools import accumulate, permutations
+from functools import reduce
+from fractions import Fraction
 
 # Utilities
 
 # Convert an array from a list of lists to a tuple of tuples (immutable lists)
 def MatrixTuple(x): return tuple(map(tuple,x))
 def zeros1(n): return n*[0]
-def zeros2(m,n): return [zeros1(n) for k in xrange(m)]
-def identmat(n): return [[1 if j == i else 0 for j in xrange(n)] for i in xrange(n)]
+def zeros2(m,n): return [zeros1(n) for k in range(m)]
+def identmat(n): return [[1 if j == i else 0 for j in range(n)] for i in range(n)]
 
 
 # Various vector and matrix operations.
@@ -417,96 +438,108 @@ def transpose(mat):
 	n1 = len(mat)
 	n2 = len(mat[0])
 	res = zeros2(n2,n1)
-	for i1 in xrange(n1):
-		for i2 in xrange(n2):
+	for i1 in range(n1):
+		for i2 in range(n2):
 			res[i2][i1] = mat[i1][i2]
 	return res
 
 def add_vv(vec1,vec2):
-	n = len(vec1)
-	res = zeros1(n)
-	for i in xrange(n):
-		res[i] = vec1[i] + vec2[i]
-	return res
+	return [x1 + x2 for x1,x2 in zip(vec1,vec2)]
 
 def addto_vv(vec1,vec2):
-	n = len(vec1)
-	for i in xrange(n):
+	for i in range(len(vec1)):
 		vec1[i] += vec2[i]
 	return vec1
 
 def add_vvv(vec1,vec2,vec3):
-	n = len(vec1)
-	res = zeros1(n)
-	for i in xrange(n):
-		res[i] = vec1[i] + vec2[i] + vec3[i]
-	return res
+	return [x1 + x2 + x3 for x1,x2,x3 in zip(vec1,vec2,vec3)]
 
 def sub_vv(vec1,vec2):
-	n = len(vec1)
-	res = zeros1(n)
-	for i in xrange(n):
-		res[i] = vec1[i] - vec2[i]
-	return res
+	return [x1 - x2 for x1,x2 in zip(vec1,vec2)]
 
 def subfm_vv(vec1,vec2):
-	n = len(vec1)
-	for i in xrange(n):
+	for i in range(len(vec1)):
 		vec1[i] -= vec2[i]
 	return vec1
 
 def mul_sv(scl,vec):
-	return [scl*mem for mem in vec]
+	return [scl*x for x in vec]
 
 def mulby_sv(scl,vec):
-	for k in xrange(len(vec)):
+	for k in range(len(vec)):
 		vec[k] *= scl
 	return vec
 
+# div returns floating-point numbers
+# dvi returns integers
+
 def div_sv(scl,vec):
-	return [mem/scl for mem in vec]
+	return [x/scl for x in vec]
 
 def divby_sv(scl,vec):
-	for k in xrange(len(vec)):
+	for k in range(len(vec)):
 		vec[k] /= scl
 	return vec
 
+def dvi_sv(scl,vec):
+	return [x//scl for x in vec]
+
+def dviby_sv(scl,vec):
+	for k in range(len(vec)):
+		vec[k] //= scl
+	return vec
+
 def mul_sm(scl,mat):
-	return [mul_sv(scl,mem) for mem in mat]
+	return [mul_sv(scl,xr) for xr in mat]
+
+# div returns floating-point numbers
+# dvi returns integers
 
 def div_sm(scl,vec):
-	return [div_sv(scl,mem) for mem in mat]
+	return [div_sv(scl,xr) for xr in mat]
 
-def mul_vv(vec,vecx):
-	n = len(vec)
+def dvi_sm(scl,vec):
+	return [dvi_sv(scl,xr) for xr in mat]
+
+def divby_sm(scl,mat):
+	for k in range(len(mat)):
+		divby_sv(scl,mat[k])
+	return mat
+
+def dviby_sm(scl,mat):
+	for k in range(len(mat)):
+		dviby_sv(scl,mat[k])
+	return mat
+
+def mul_vv(vec1,vec2):
 	ttl = 0
-	for i in xrange(n):
-		ttl += vec[i]*vecx[i]
+	for i in range(len(vec1)):
+		ttl += vec1[i]*vec2[i]
 	return ttl
 
 def mul_vm(vec,mat):
 	nx = len(vec)
 	n = len(mat[0])
 	res = zeros1(n)
-	for i in xrange(n):
+	for i in range(n):
 		ttl = 0
-		for j in xrange(nx):
+		for j in range(nx):
 			ttl += vec[j]*mat[j][i]
 		res[i] = ttl
 	return res
 
 def mul_mv(mat,vec):
-	return [mul_vv(mtrow,vec) for mtrow in mat]
+	return [mul_vv(xr,vec) for xr in mat]
 
 def mul_vmv(vec1,mat,vec2):
 	n1 = len(vec1)
 	n2 = len(vec2)
 	res = 0
-	for i1 in xrange(n1):
+	for i1 in range(n1):
 		vval = vec1[i1]
 		mtrow = mat[i1]
 		rsi = 0
-		for i2 in xrange(n2):
+		for i2 in range(n2):
 			rsi += mtrow[i2]*vec2[i2]
 		res += vval*rsi
 	return res
@@ -516,18 +549,18 @@ def mul_mm(mat1,mat2):
 	nx = len(mat1[0])
 	n2 = len(mat2[0])
 	res = zeros2(n1,n2)
-	for i1 in xrange(n1):
-		mtrow = mat1[i1]
-		for i2 in xrange(n2):
+	for i1 in range(n1):
+		xr = mat1[i1]
+		for i2 in range(n2):
 			ttl = 0
-			for j in xrange(nx):
-				ttl += mtrow[j]*mat2[j][i2]
+			for j in range(nx):
+				ttl += xr[j]*mat2[j][i2]
 			res[i1][i2] = ttl
 	return res
 
 def muladdto_vsv(vec1,scl,vec2):
 	n = len(vec1)
-	for i in xrange(n):
+	for i in range(n):
 		vec1[i] += scl*vec2[i]
 	return vec1
 
@@ -537,23 +570,23 @@ def MatrixInverse(mat):
 	# Set up the work matrix: originally (original,identity)
 	# Transform into (identity,inverse)
 	n = len(mat)
-	workmat = [(2*n)*[Fraction(0)] for k in xrange(n)]
-	for i in xrange(n):
+	workmat = [(2*n)*[Fraction(0)] for k in range(n)]
+	for i in range(n):
 		mrow = mat[i]
 		wmrow = workmat[i]
-		for j in xrange(n):
+		for j in range(n):
 			wmrow[j] += int(mrow[j])
-	for k in xrange(n):
+	for k in range(n):
 		workmat[k][n+k] += 1
 	
 	# Do forward substitution
-	for icol in xrange(n):
+	for icol in range(n):
 		# Necessary to exchange rows
 		# to bring a nonzero value into position?
 		# Return None if singular
 		if workmat[icol][icol] == 0:
 			ipvt = None
-			for i in xrange(icol+1,n):
+			for i in range(icol+1,n):
 				if workmat[i][icol] != 0:
 					ipvt = i
 					break
@@ -564,31 +597,31 @@ def MatrixInverse(mat):
 		# Make diagonal 1:
 		wmicol = workmat[icol]
 		dgvrecip = 1/wmicol[icol]
-		for i in xrange(icol,2*n):
+		for i in range(icol,2*n):
 			wmicol[i] *= dgvrecip
 		# Forward substitute:
-		for i in xrange(icol+1,n):
+		for i in range(icol+1,n):
 			wmi = workmat[i]
 			elimval = wmi[icol]
-			for j in xrange(icol,2*n):
+			for j in range(icol,2*n):
 				wmi[j] -= elimval*wmicol[j]
 	
 	# Do back substitution
-	for icol in xrange(n-1,0,-1):
+	for icol in range(n-1,0,-1):
 		wmicol = workmat[icol]
-		for i in xrange(icol):
+		for i in range(icol):
 			wmi = workmat[i]
 			elimval = wmi[icol]
-			for j in xrange(icol,2*n):
+			for j in range(icol,2*n):
 				wmi[j] -= elimval*wmicol[j]
 	
 	# Done!
-	return [[workmat[i][n+j] for j in xrange(n)] for i in xrange(n)]
+	return [[workmat[i][n+j] for j in range(n)] for i in range(n)]
 
 # Find shared denominator of rational-number vectors and matrices;
 # turn them into integer vectors and matrices
 # Returns (integerized vector/matrix, shared denominator)
-def lcm(a,b): return 1 if a*b == 0 else (a/gcd(a,b))*b
+def lcm(a,b): return 1 if a*b == 0 else (a//gcd(a,b))*b
 
 def SharedDen_Vector(vec):
 	den = 1
@@ -599,7 +632,7 @@ def SharedDen_Matrix(mat):
 	matexp = [SharedDen_Vector(vec) for vec in mat]
 	den = 1
 	for vec,vdn in matexp: den = lcm(den,vdn)
-	return ([mul_sv(den/vdn,vec) for vec,vdn in matexp], den)
+	return ([mul_sv(den//vdn,vec) for vec,vdn in matexp], den)
 
 
 # Lie-Algebra Setup:
@@ -624,21 +657,47 @@ def LA_Cartan(dynkin):
 	rtwts = dynkin[0]
 	n = len(rtwts)
 	mat = zeros2(n,n)
-	for k in xrange(n):
+	for k in range(n):
 		mat[k][k] = 2
 	for conn in dynkin[1]:
 		i = conn[0]-1
 		j = conn[1]-1
 		str = conn[2]
-		mat[i][j] = - str/rtwts[j]
-		mat[j][i] = - str/rtwts[i]
+		mat[i][j] = - str//rtwts[j]
+		mat[j][i] = - str//rtwts[i]
 	return MatrixTuple(mat)
 
-# Sort by root values 
-def RootWtSortFunc(rx1,rx2):
-	r1 = rx1[0]; r2 = rx2[0];
-	l1 = sum(r1); l2 = sum(r2)
-	return cmp(r1,r2) if l1 == l2 else cmp(l2,l1)
+# Sort by root values
+
+# Weyl orbits: root, weight
+def RootWtSortKey(rx):
+	r = rx[0]
+	l = sum(r)
+	return (-l,tuple(r))
+
+# Irreps: degen, root, weight
+def DgnRootWtSortKey(rx):
+	r = rx[1]
+	l = sum(r)
+	return (-l,tuple(r))
+
+def sumprod(rlst):
+	sptot = 0
+	for r in rlst:
+		sptot = sum(r) if hasattr(r,'__iter__') else r
+	return sptot
+
+# Product Weyl orbits: root, weight
+def RootWtProdSortKey(rx):
+	r = rx[0]
+	l = sumprod(r)
+	return (-l,tuple(r))
+
+# Product irreps: degen, root, weight
+def DgnRootWtProdSortKey(rx):
+	r = rx[1]
+	l = sumprod(r)
+	return (-l,tuple(r))
 
 # Find positive roots from the Cartan Matrix
 # They all have integer values
@@ -646,7 +705,7 @@ def RootWtSortFunc(rx1,rx2):
 def LA_PositiveRoots(ctnmat):
 	# Initial positive roots
 	n = len(ctnmat)
-	PosRoots = zip(map(tuple,identmat(n)),ctnmat)
+	PosRoots = list(zip(map(tuple,identmat(n)),ctnmat))
 	
 	# Test for whether we've found a root, and if so, return its index
 	PRTest = {}
@@ -654,7 +713,7 @@ def LA_PositiveRoots(ctnmat):
 		PRTest[rwt[0]] = k
 	
 	# Find the next root until one cannot find any more
-	WhichWay = [tuple(n*[True]) for k in xrange(n)]
+	WhichWay = [tuple(n*[True]) for k in range(n)]
 	RtIndx = 0
 	while RtIndx < len(PosRoots):
 		rwt = PosRoots[RtIndx]
@@ -662,24 +721,24 @@ def LA_PositiveRoots(ctnmat):
 		ThisWeight = rwt[1]
 		ctpd = list(rwt[1])
 		# Advance in each direction, if possible
-		for i in xrange(n):
+		for i in range(n):
 			ThisWW = WhichWay[RtIndx]
-			NewWW = [j != i for j in xrange(n)]
+			NewWW = [j != i for j in range(n)]
 			if ThisWW[i]:
-				for j in xrange(1,-ctpd[i]+1):
+				for j in range(1,-ctpd[i]+1):
 					# Calculate roots and weights in parallel,
 					# to avoid repeated matrix.vector calculations
 					NewRoot = list(ThisRoot)
 					NewRoot[i] += j
 					NewRoot = tuple(NewRoot)
 					NewWeight = list(ThisWeight)
-					for k in xrange(n):
+					for k in range(n):
 						NewWeight[k] += j*ctnmat[i][k]
 					NewWeight = tuple(NewWeight)
 					# Avoid integer multiples of previous root vectors
 					NRLen = sum(NewRoot)
 					RootOK = True
-					for NRDiv in xrange(2,NRLen):
+					for NRDiv in range(2,NRLen):
 						if (NRLen % NRDiv) != 0: continue
 						DVI = True
 						for rcmp in NewRoot:
@@ -695,14 +754,14 @@ def LA_PositiveRoots(ctnmat):
 						# Add the root if possible
 						if NewRoot in PRTest:
 							WhichWay[RtIndx] = \
-								tuple([ThisWW[k] and NewWW[k] for k in xrange(n)])
+								tuple([ThisWW[k] and NewWW[k] for k in range(n)])
 						else:
 							PRTest[NewRoot] = len(PosRoots)
 							PosRoots.append((NewRoot,NewWeight))
 							WhichWay.append(tuple(NewWW))
 		RtIndx += 1
 	
-	PosRoots.sort(RootWtSortFunc)
+	PosRoots.sort(key=RootWtSortKey)
 	PosRoots.reverse()
 	return tuple(PosRoots)
 
@@ -716,6 +775,7 @@ def InvalidLATypeError(latype):
 # If the algebra type is invalid, the constructor throws an exception.
 #
 # Members of the Lie-algebra object:
+# latype -- (family, rank)
 # name -- name as letter-number with SU/SO/Sp version where it exists
 # special -- dict with key being type, value being max-weight vector
 #    The type is "fundamental", "adjoint", "vector", "spinor", etc.
@@ -731,7 +791,6 @@ def InvalidLATypeError(latype):
 # invctn -- inverse of Cartan matrix
 # ictnnum -- numerator of integerized invctn
 # ictnden -- denominator of integerized invctn
-# invctn -- inverse of Cartan matrix
 # posroots -- positive roots
 # posrootsum -- sum of positive roots
 #
@@ -774,7 +833,7 @@ class LieAlgebra:
 			self.special["vector-mirror"] = tuple(spcl)
 			self.special["fundamental-mirror"] = tuple(spcl)
 			self.dynkin = (tuple(n*[1]), \
-				tuple([(k, k+1, 1) for k in xrange(1,n)]))
+				tuple([(k, k+1, 1) for k in range(1,n)]))
 		elif family == 2:
 			# B(n)
 			nmsfx = "SO(%d)" % (2*n+1)
@@ -800,7 +859,7 @@ class LieAlgebra:
 			if n % 2 == 1 and n > 1: self.special["fundamental-1"] = tuple(spcl)
 			if n > 1:
 				self.dynkin = (tuple(((n-1)*[2]) + [1]), \
-					tuple([(k, k+1, 2) for k in xrange(1,n-1)] + [(n-1,n,2)]))
+					tuple([(k, k+1, 2) for k in range(1,n-1)] + [(n-1,n,2)]))
 			else:
 				self.dynkin = ((1,),())
 		elif family == 3:
@@ -815,7 +874,7 @@ class LieAlgebra:
 			self.special["fundamental"] = tuple(spcl)
 			if n > 1:
 				self.dynkin = (tuple(((n-1)*[1]) + [2]), \
-					tuple([(k, k+1, 1) for k in xrange(1,n-1)] + [(n-1,n,2)]))
+					tuple([(k, k+1, 1) for k in range(1,n-1)] + [(n-1,n,2)]))
 			else:
 				self.dynkin = ((1,),())
 		elif family == 4:
@@ -857,7 +916,7 @@ class LieAlgebra:
 			if n % 2 == 1: self.special["fundamental-mirror"] = tuple(spcl)
 			if n > 2:
 				self.dynkin = (tuple(n*[1]), \
-					tuple([(k, k+1, 1) for k in xrange(1,n-1)] + [(n-2,n,1)]))
+					tuple([(k, k+1, 1) for k in range(1,n-1)] + [(n-2,n,1)]))
 			else:
 				self.dynkin = ((1,1), ())
 		elif family == 5:
@@ -888,7 +947,7 @@ class LieAlgebra:
 				self.special["adjoint"] = tuple(spcl)
 				self.special["fundamental"] = tuple(spcl)
 			self.dynkin = (tuple(n*[1]), \
-				tuple([(k, k+1, 1) for k in xrange(1,n-1)] + [(3,n,1)]))
+				tuple([(k, k+1, 1) for k in range(1,n-1)] + [(3,n,1)]))
 		elif family == 6:
 			if n != 4: raise InvalidLATypeError(latype)
 			# F4
@@ -954,7 +1013,12 @@ def WeightToRoot(la, wt):
 	return tuple(mul_vm(wt,la.ictnnum))
 	
 def RootToWeight(la, rt):
-	return tuple(div_sv(la.ictnden,mul_vm(rt,la.ctnmat)))
+	return tuple(dvi_sv(la.ictnden,mul_vm(rt,la.ctnmat)))
+
+def AddWeightsToRoots(la, rts):
+	wts = mul_mm(rts,la.ctnmat)
+	dviby_sm(la.ictnden,wts)
+	return list(zip(map(tuple,rts),map(tuple,wts)))
 
 # Valid highest-weight vector?
 def InvalidMaxWtsError(latype, maxwts):
@@ -1000,31 +1064,31 @@ def RepRootVectors(latype, maxwts):
 		ThisWeight = root[1]
 		ctpd = list(root[1])
 		# Advance in each direction, if possible
-		for i in xrange(n):
+		for i in range(n):
 			ThisWW = WhichWay[RtIndx]
-			NewWW = [j != i for j in xrange(n)]
+			NewWW = [j != i for j in range(n)]
 			if ThisWW[i]:
-				for j in xrange(1,ctpd[i]+1):
+				for j in range(1,ctpd[i]+1):
 					# Calculate roots and weights in parallel,
 					# to avoid repeated matrix.vector calculations
 					NewRootInt = list(ThisRootInt)
 					NewRootInt[i] -= j*den
 					NewRootInt = tuple(NewRootInt)
 					NewWeight = list(ThisWeight)
-					for k in xrange(n):
+					for k in range(n):
 						NewWeight[k] -= j*ctnmat[i][k]
 					NewWeight = tuple(NewWeight)
 					# Add the root if possible
 					if NewRootInt in RRTest:
 						WhichWay[RtIndx] = \
-								tuple([ThisWW[k] and NewWW[k] for k in xrange(n)])
+								tuple([ThisWW[k] and NewWW[k] for k in range(n)])
 					else:
 						RRTest[NewRootInt] = len(RepRoots)
 						RepRoots.append((NewRootInt,NewWeight))
 						WhichWay.append(tuple(NewWW))
 		RtIndx += 1
 		
-	RepRoots.sort(RootWtSortFunc)
+	RepRoots.sort(key=RootWtSortKey)
 	return tuple(RepRoots)
 
 # To find the root degeneracies, use Freudenthal's recurrence
@@ -1038,7 +1102,7 @@ def RepRootDegens(latype, RepRoots):
 	posroots = [mul_sv(den,rt[0]) for rt in la.posroots]
 	posrootsum = mul_sv(den,la.posrootsum)
 	
-	# Assumes RepRoots sorted upward by sum, like with RootWtSortFunc
+	# Assumes RepRoots sorted upward by sum, like with key=RootWtSortKey
 	# Set up quick search for known ones
 	rrix = {}
 	for i,rt in enumerate(RepRoots):
@@ -1049,7 +1113,7 @@ def RepRootDegens(latype, RepRoots):
 	degens = zeros1(nrr)
 	degens[0] = 1
 	# Next ones
-	for k in xrange(1,nrr):
+	for k in range(1,nrr):
 		rt = RepRoots[k]
 		nx = 0
 		for shtrt in posroots:
@@ -1069,7 +1133,9 @@ def RepRootDegens(latype, RepRoots):
 def RepRootVectorsDegens(latype, maxwts):
 	reproots = RepRootVectors(latype, maxwts)
 	degens = RepRootDegens(latype, [rt[0] for rt in reproots])
-	return tuple([(degens[k],rt[0],rt[1]) for k,rt in enumerate(reproots)])
+	res = [(degens[k],rt[0],rt[1]) for k,rt in enumerate(reproots)]
+	res.sort(key=DgnRootWtSortKey)
+	return tuple(res)
 
 # Short version.
 # Call with the Lie-algebra type and the max-weight vector
@@ -1100,6 +1166,42 @@ def TotalDegen(latype, maxwts):
 
 # Weyl orbits
 
+def prodlist(lst): return reduce(lambda x,y: x*y, lst, 1)
+
+def factorial(n):
+	if n < 0: return 0
+	return prodlist(range(1,int(n)+1))
+
+def WeylGroupOrder(latype):
+		if len(latype) != 2: raise InvalidLATypeError(latype)
+		family = latype[0]
+		n = latype[1]
+		if type(family) != type(0): raise InvalidLATypeError(latype)
+		if type(n) != type(0): raise InvalidLATypeError(latype)
+		
+		if family == 1:
+			if n >= 1: return factorial(n+1)
+			else: raise InvalidLATypeError(latype)
+		elif family == 2 or family == 3:
+			if n >= 1: return (2**n) * factorial(n)
+			else: raise InvalidLATypeError(latype)
+		elif family == 4:
+			if n >= 2: return (2**(n-1)) * factorial(n)
+			else: raise InvalidLATypeError(latype)
+		elif family == 5:
+			if n == 6: return 51840
+			elif n == 7: return 2903040
+			elif n == 8: return 696729600
+			else: raise InvalidLATypeError(latype)
+		elif family == 6:
+			if n == 4: return 1152
+			else: raise InvalidLATypeError(latype)
+		elif family == 7:
+			if n == 2: return 12
+			else: raise InvalidLATypeError(latype)
+		else: raise InvalidLATypeError(latype)
+
+
 # From the orbit's dominant weight. Step down using the simple roots
 # Dominant weight specified like an irrep's highest weight
 def WeylOrbitForDomWt(latype, maxwts):
@@ -1118,17 +1220,18 @@ def WeylOrbitForDomWt(latype, maxwts):
 		newrts = set()
 		for rt in oldrts:
 			mtrt = mul_mv(metric,rt)
-			for k in xrange(n):
+			for k in range(n):
 				mr = mtrt[k]
 				if mr > 0:
 					nwrt = list(rt)
-					nwrt[k] -= (2*mr)/metric[k][k]
+					nwrt[k] -= (2*mr)//metric[k][k]
 					newrts.add(tuple(nwrt))
 		rtlist += list(newrts)
 		oldrts = newrts
 	
-	return tuple([(rt,RootToWeight(la,rt)) for rt in rtlist])
-
+	res = AddWeightsToRoots(la,rtlist)
+	res.sort(key=RootWtSortKey)
+	return tuple(res)
 
 def DomWtFromRoot(latype, root):
 	la = GetLieAlgebra(latype)
@@ -1149,29 +1252,23 @@ def DomWtFromRoot(latype, root):
 					mtrtmin = mr
 		mr = mtrt[ix]
 		if mr > 0: break
-		rt[ix] -= (2*mr)/metric[ix][ix]
+		rt[ix] -= (2*mr)//metric[ix][ix]
 		wt = RootToWeight(la,rt)
 	
 	return (tuple(rt), wt)
 
 # Explicit expressions for Weyl orbits 
 
-def accumulate(lst):
-	accval = 0
-	acclst = []
-	for val in lst:
-		accval += val
-		acclst.append(accval)
-	return acclst
+def accumlist(lst): return list(accumulate(lst))
 
 def MxWtToYD(maxwts):
-	return list(reversed(accumulate(reversed(maxwts))))
+	return list(reversed(accumlist(reversed(maxwts))))
 
 def AddSignsToRoot(root):
 	rt0 = list(root)
 	n = len(rt0)
 	sgnroot = [rt0]
-	for k in xrange(n):
+	for k in range(n):
 		if root[k] == 0: continue
 		newsgnroot = []
 		for rt in sgnroot:
@@ -1182,7 +1279,7 @@ def AddSignsToRoot(root):
 		sgnroot = newsgnroot
 	# Select ones that are unique to within sorting;
 	# assumes that the input is already sorted
-	for k in xrange(n-1):
+	for k in range(n-1):
 		if abs(rt0[k]) == abs(rt0[k+1]):
 			newsgnroot = []
 			for rt in sgnroot:
@@ -1191,31 +1288,6 @@ def AddSignsToRoot(root):
 			sgnroot = newsgnroot
 	
 	return MatrixTuple(sgnroot)
-
-# Implemented as an iterator
-# To get list of them, do list(permutations(list to permute))
-def permutations(lst):
-	x = list(lst)
-	n = len(x)
-	x.sort()
-	yield list(x)
-	while True:
-		WasFound = False
-		for k in xrange(n-2,-1,-1):
-			if x[k] < x[k+1]:
-				ix = k
-				WasFound = True
-				break
-		if not WasFound: break
-		for l in xrange(n-1,ix,-1):
-			if x[ix] < x[l]:
-				iy = l
-				break
-		xs = x[ix]
-		x[ix] = x[iy]
-		x[iy] = xs
-		x = x[:ix+1] + list(reversed(x[ix+1:]))
-		yield list(x)
 
 def flatten(lsts): return reduce(lambda a,b: a+b, map(list,lsts), [])
 
@@ -1233,21 +1305,21 @@ def WeylOrbitForDomWtExplicit(latype, maxwts):
 	if family == 1:
 		mwx = MxWtToYD(list(maxwts)+[0])
 		mwxtot = sum(mwx)
-		for k in xrange(n+1):
+		for k in range(n+1):
 			mwx[k] = (n+1)*mwx[k] - mwxtot
-		orbrts = [accumulate(rt)[:-1] for rt in permutations(mwx)]
+		orbrts = [accumlist(rt)[:-1] for rt in permutations(mwx)]
 	
 	elif family == 2:
 		mwx = list(maxwts)
 		mwx = mul_sv(2,mwx[:-1]) + [mwx[-1]]
 		mwx = MxWtToYD(mwx)
 		mwxl = AddSignsToRoot(mwx)
-		orbrts = map(accumulate, PermuteRootsInList(mwxl))
+		orbrts = map(accumlist, PermuteRootsInList(mwxl))
 	
 	elif family == 3:
 		mwx = MxWtToYD(maxwts)
 		mwxl = AddSignsToRoot(mwx)
-		mwxl = map(accumulate, PermuteRootsInList(mwxl))
+		mwxl = map(accumlist, PermuteRootsInList(mwxl))
 		orbrts = [mul_sv(2,rt[:-1]) + [rt[-1]] for rt in mwxl]
 	
 	elif family == 4:
@@ -1256,17 +1328,42 @@ def WeylOrbitForDomWtExplicit(latype, maxwts):
 		mwxl = AddSignsToRoot(mwx)
 		if mwx[-1] != 0:
 			mwxl = [rt for rt in mwxl if reduce(lambda a,b: a*b, rt)*mwx[-1] > 0]
-		mwxl = PermuteRootsInList(mwxl)
-		mwxl = [accumulate(rt[:-2] + [rt[-2]-rt[-1], 2*rt[-1]]) for rt in mwxl]
+		mwxl = map(list,PermuteRootsInList(mwxl))
+		mwxl = [accumlist(rt[:-2] + [rt[-2]-rt[-1], 2*rt[-1]]) for rt in mwxl]
 		if (n % 2) == 0:
-			orbrts = [rt[:-2] + div_sv(2,rt[-2:]) for rt in mwxl]
+			orbrts = [rt[:-2] + dvi_sv(2,rt[-2:]) for rt in mwxl]
 		else:
 			orbrts = [mul_sv(2,rt[:-2]) + rt[-2:] for rt in mwxl]
+	
+	elif family == 6 and n == 4:
+		mwx = mul_vm(maxwts,((2,0,0,-2),(2,2,0,-4),(1,1,1,-3),(0,0,0,-2)))
+		mwx1 = mul_sv(2,mwx)
+		mwx2 = mul_mv(((1,-1,-1,-1),(-1,1,-1,-1),(-1,-1,1,-1),(-1,-1,-1,1)),mwx)
+		mwx3 = mul_mv(((1,1,1,1),(1,1,-1,-1),(1,-1,1,-1),(1,-1,-1,1)),mwx)
+		mwxl1 = list(map(tuple, AddSignsToRoot(mwx1) ))
+		mwxl2 = list(map(tuple, AddSignsToRoot(mwx2) ))
+		mwxl3 = list(map(tuple, AddSignsToRoot(mwx3) ))
+		mwxl = list(set(mwxl1+mwxl2+mwxl3))
+		mwxl = PermuteRootsInList(mwxl)
+		orbrts = mul_mm(mwxl,((1,1,1,0),(0,1,1,0),(0,0,1,0),(-1,-2,-3,-2)))
+		dviby_sm(4, orbrts)
+	
+	elif family == 7 and n == 2:
+		mwx = mul_vm(maxwts,((2,-1,-1),(1,0,-1)))
+		mwxl = list(permutations(mwx))
+		mwxl = mwxl + list(map(tuple,mul_sm(-1,mwxl)))
+		orbrts = mul_mm(mwxl,((0,0),(1,1),(0,-1)))
 	
 	else:
 		orbrts = []
 	
-	return tuple([(tuple(rt),RootToWeight(la,rt)) for rt in orbrts])
+	# Find unique roots, using tuples because they are hashable
+	orbrts = map(tuple,orbrts)
+	orbrts = list(set(orbrts))
+		
+	res = AddWeightsToRoots(la,orbrts) if len(orbrts) > 0 else []
+	res.sort(key=RootWtSortKey)
+	return tuple(res)
 
 
 # Caching of Weyl orbits. Uses a global cache
@@ -1284,7 +1381,7 @@ def GetOrbit(latype, maxwts):
 			else:
 				mwscale = gcd(mwscale,aw)
 	if mwscale == None: mwscale = 1
-	mwred = div_sv(mwscale,maxwts)
+	mwred = dvi_sv(mwscale,maxwts)
 	
 	CacheKey = (tuple(latype), tuple(mwred))
 	if CacheKey not in WeylOrbitCache:
@@ -1357,7 +1454,7 @@ def WeylDomWtRepRootVectors(latype, maxwts):
 				RepRoots.append((NewRootInt,NewWeight))
 		RtIndx += 1
 	
-	RepRoots.sort(RootWtSortFunc)
+	RepRoots.sort(key=RootWtSortKey)
 	return tuple(RepRoots)
 
 def WeylDomWtRepRootDegens(latype, RepRoots):
@@ -1367,7 +1464,7 @@ def WeylDomWtRepRootDegens(latype, RepRoots):
 	posroots = [mul_sv(den,rt[0]) for rt in la.posroots]
 	posrootsum = mul_sv(den,la.posrootsum)
 	
-	# Assumes RepRoots sorted upward by sum, like with RootWtSortFunc
+	# Assumes RepRoots sorted upward by sum, like with RootWtSortKey
 	# Set up quick search for known ones
 	rrix = {}
 	for i,rt in enumerate(RepRoots):
@@ -1378,7 +1475,7 @@ def WeylDomWtRepRootDegens(latype, RepRoots):
 	degens = zeros1(nrr)
 	degens[0] = 1
 	# Next ones
-	for k in xrange(1,nrr):
+	for k in range(1,nrr):
 		rt = RepRoots[k]
 		nx = 0
 		for shtrt in posroots:
@@ -1397,8 +1494,9 @@ def WeylDomWtRepRootDegens(latype, RepRoots):
 def WeylDomWtRepRootVectorsDegens(latype, maxwts):
 	reproots = WeylDomWtRepRootVectors(latype, maxwts)
 	degens = WeylDomWtRepRootDegens(latype, [rt[0] for rt in reproots])
-	return tuple([(degens[k],rt[0],rt[1]) for k,rt in enumerate(reproots)])
-
+	res = [(degens[k],rt[0],rt[1]) for k,rt in enumerate(reproots)]
+	res.sort(key=DgnRootWtSortKey)
+	return tuple(res)
 
 # Caching of irreps' Weyl orbits. Uses a global cache
 RepresentationWeylOrbitCache = {}
@@ -1413,9 +1511,13 @@ def GetRepOrbits(latype, maxwts):
 # Orbits input as list of (multiplicity, dominant root, dominant weight)
 
 def ExpandWeylOrbits(latype, orbits):
-	exporbs = [[(orb[0],wr[0],wr[1]) for wr in GetOrbit(latype,orb[2])] \
-		for orb in orbits]
-	return tuple(flatten(exporbs))
+	res = []
+	for orb in orbits:
+		for wr in GetOrbit(latype,orb[2]):
+			drw = (orb[0],wr[0],wr[1])
+			res.append(drw)
+	res.sort(key=DgnRootWtSortKey)
+	return tuple(res)
 
 # Expand the rep with the Weyl orbits
 
@@ -1431,8 +1533,6 @@ def GetRep(latype, maxwts):
 	if CacheKey not in RepresentationCache:
 		RepresentationCache[CacheKey] = GetRepOrbitsExpanded(latype, maxwts)
 	return RepresentationCache[CacheKey]
-
-# Compare to GetRepDirect(latype, maxwts) -- the old code
 
 
 # Properties of irreps
@@ -1466,6 +1566,26 @@ def RepConjugate(latype, maxwts):
 def RepIsSelfConjugate(latype, maxwts):
 	return tuple(maxwts) == RepConjugate(latype,maxwts)
 
+def MakeConjgIndicesD4(perm):
+	if len(perm) != 3: return None
+	plst = list(perm)
+	plst.sort()
+	psrt = tuple(plst)
+	if psrt != (1,2,3): return None
+	
+	# Make room for the central index
+	plst = [p+1 if p>1 else p for p in perm]
+	
+	# Return with the central index
+	return (plst[0], 2, plst[1], plst[2])
+
+def RepConjugateD4(maxwts, perm):
+	permxp = MakeConjgIndicesD4(perm)
+	if permxp == None: return None
+	
+	return tuple( (maxwts[p-1] for p in permxp) )
+
+
 # The height of a rep is max - min of  all the root - vector component sums
 # Multiplier for max weight; height is linear in the max weight
 #
@@ -1477,13 +1597,13 @@ def RepHeightMult(latype):
 	family,n = latype
 	
 	if family == 1: # A(n)
-		mult = [(k+1)*(n-k) for k in xrange(n)]
+		mult = [(k+1)*(n-k) for k in range(n)]
 	elif family == 2: # B(n)
-		mult = [(k+1)*(2*n-k) for k in xrange(n-1)] + [n*(n+1)/2]
+		mult = [(k+1)*(2*n-k) for k in range(n-1)] + [n*(n+1)/2]
 	elif family == 3: # C(n)
-		mult = [(k+1)*(2*n-k-1) for k in xrange(n)]
+		mult = [(k+1)*(2*n-k-1) for k in range(n)]
 	elif family == 4: # D(n)
-		mult = [(k+1)*(2*n-k-2) for k in xrange(n-2)] + [n*(n-1)/2, n*(n-1)/2]
+		mult = [(k+1)*(2*n-k-2) for k in range(n-2)] + [n*(n-1)/2, n*(n-1)/2]
 	elif family == 5: # E6, E7, E8
 		if n == 6:
 			mult = [16, 30, 42, 30, 16, 22]
@@ -1541,7 +1661,7 @@ def RepReality(latype, maxwts):
 			psr = 0
 	elif family == 5 and n == 7:
 		# E7
-		psr = maxwts[4] + maxwts[6] + maxwts[7],
+		psr = maxwts[3] + maxwts[5] + maxwts[6]
 	else:
 		# G2, F4, E6, E8
 		psr = 0
@@ -1561,21 +1681,21 @@ def RepConservModMult(latype):
 	family,n = latype
 	
 	if family == 1: # A(n)
-		cvms = ((n+1, tuple([(k+1) for k in xrange(n)])),)
+		cvms = ((n+1, tuple([(k+1) for k in range(n)])),)
 	elif family == 2: # B(n)
 		cvms = ((2, tuple(zeros1(n-1) + [1])),)
 	elif family == 3: # C(n)
-		cvms = ((2, tuple([(k+1) % 2 for k in xrange(n)])),)
+		cvms = ((2, tuple([(k+1) % 2 for k in range(n)])),)
 	elif family == 4: # D(n)
 		cvms0 = (2, tuple(zeros1(n-2) + [1,1]))
 		if (n % 2) == 0:
 			cvms = (cvms0, \
-				(2, tuple([(k+1) % 2 for k in xrange(n-2)] + [1,0])), \
-				(2, tuple([(k+1) % 2 for k in xrange(n-2)] + [0,1])) \
+				(2, tuple([(k+1) % 2 for k in range(n-2)] + [1,0])), \
+				(2, tuple([(k+1) % 2 for k in range(n-2)] + [0,1])) \
 				)
 		else:
 			cvms = (cvms0, \
-				(4, tuple([2*((k+1) % 2) for k in xrange(n-2)] + [1,3])) \
+				(4, tuple([2*((k+1) % 2) for k in range(n-2)] + [1,3])) \
 				)
 	elif family == 5:
 		if n == 6: # E6
@@ -1613,7 +1733,7 @@ def RepProperties(latype, maxwts):
 	props = {}
 	props["type"] = latype
 	mwts = tuple(maxwts)
-	props["maxwts"] = mwts
+	props["maxwts"] = tuple(mwts)
 	mwcjg = RepConjugate(latype,mwts)
 	props["mwconjg"] = mwcjg
 	sc = mwts == mwcjg
@@ -1649,12 +1769,10 @@ def RepIndex(latype, maxwts):
 # Reducible representations: express as sum of irreps,
 # a list of irrep highest weights
 
-def RepSortFunc(rt1,rt2): return cmp(rt2[1],rt1[1])
+def TrimRepZeros(rep, sortkey):
+	return tuple([tuple(r) for r in sorted(rep,key=sortkey) if r[0] != 0])
 
-def TrimRepZeros(rep):
-	return tuple([tuple(r) for r in sorted(rep,RepSortFunc) if r[0] != 0])
-
-def GetRepListGeneral(latype, mwlist, repfunc):
+def GetRepListGeneral(latype, mwlist, repfunc, sortkey):
 	# Find the combined representation.
 	# Would like degens, roots, and weights, since we'll need all three.
 	# Use index function rppwrix to speed up lookups in the power-rep list;
@@ -1670,9 +1788,9 @@ def GetRepListGeneral(latype, mwlist, repfunc):
 			else:
 				rpix[rrkey][0] += rprt[0]
 	
-	return TrimRepZeros(rpix.values())
+	return TrimRepZeros(rpix.values(), sortkey)
 
-def GetRepCntdListGeneral(latype, mwclist, repfunc):
+def GetRepCntdListGeneral(latype, mwclist, repfunc, sortkey):
 	# Find the combined representation for a counted list: (count, maxwts).
 	# Would like degens, roots, and weights, since we'll need all three.
 	# Use index function rppwrix to speed up lookups in the power-rep list;
@@ -1689,14 +1807,14 @@ def GetRepCntdListGeneral(latype, mwclist, repfunc):
 			else:
 				rpix[rrkey][0] += rprt[0]
 	
-	return TrimRepZeros(rpix.values())
+	return TrimRepZeros(rpix.values(), sortkey)
 
 def GetRepList(latype,mwlist):
-	return GetRepListGeneral(latype, mwlist, GetRep)
+	return GetRepListGeneral(latype, mwlist, GetRep, DgnRootWtSortKey)
 
 def GetRepCntdList(latype,mwclist):
-	return GetRepCntdListGeneral(latype, mwclist, GetRep)
-
+	return GetRepCntdListGeneral(latype, mwclist, GetRep, DgnRootWtSortKey)
+	
 # Takes a rep and turns the roots into appropriate fractional versions
 
 def mulroot(rootscale, rootvector):
@@ -1744,7 +1862,7 @@ def GetAlgProdRepGeneral(latlist, maxwts, repfunc):
 		rep = newrep
 	u1s = maxwts[len(latlist):]
 	for r in rep:
-		for k in xrange(1,2+1):
+		for k in range(1,2+1):
 			r[k] += u1s
 			r[k] = tuple(r[k])
 	
@@ -1756,24 +1874,26 @@ def GetAlgProdRep(latlist, maxwts):
 def GetAlgProdRepOrbits(latlist, maxwts):
 	return GetAlgProdRepGeneral(latlist, maxwts, GetRepOrbits)
 
-def GetAlgProdRepList(latype,mwlist):
-	return GetRepListGeneral(latype, mwlist, GetAlgProdRep)
+def GetAlgProdRepList(latlist,mwlist):
+	return GetRepListGeneral(latlist, mwlist, GetAlgProdRep, DgnRootWtProdSortKey)
 
-def GetAlgProdRepCntdList(latype,mwclist):
-	return GetRepCntdListGeneral(latype, mwclist, GetAlgProdRep)
+def GetAlgProdRepCntdList(latlist,mwclist):
+	return GetRepCntdListGeneral(latlist, mwclist, GetAlgProdRep, DgnRootWtProdSortKey)
 
 # Select extended: type is "sngl" -- single irrep, 
 # "list" -- list of irreps, "cntd" -- counted list of irreps
 
 def GetRepXtnd(latype, rptype, maxwts):
-	if rptype == "sngl": return GetRep(latype,maxwts)
-	elif rptype == "list": return GetRepList(latype,maxwts)
-	elif rptype == "cntd": return GetRepCntdList(latype,maxwts)
+	rptc = rptype.casefold()
+	if rptc == "sngl": return GetRep(latype,maxwts)
+	elif rptc == "list": return GetRepList(latype,maxwts)
+	elif rptc == "cntd": return GetRepCntdList(latype,maxwts)
 
 def GetAlgProdRepXtnd(latlist, rptype, maxwts):
-	if rptype == "sngl": return GetAlgProdRep(latlist,maxwts)
-	elif rptype == "list": return GetAlgProdRepList(latlist,maxwts)
-	elif rptype == "cntd": return GetAlgProdRepCntdList(latlist,maxwts)
+	rptc = rptype.casefold()
+	if rptc == "sngl": return GetAlgProdRep(latlist,maxwts)
+	elif rptc == "list": return GetAlgProdRepList(latlist,maxwts)
+	elif rptc == "cntd": return GetAlgProdRepCntdList(latlist,maxwts)
 
 # Extensions. Type is "sngl" -- single irrep, "list" -- list of irreps,
 # "cntd" -- counted list of irreps. The algebra products are
@@ -1782,14 +1902,15 @@ def GetAlgProdRepXtnd(latlist, rptype, maxwts):
 # and the u's U(1) factors.
 
 def TotalDegenXtnd(latype, rptype, maxwts):
-	if rptype == "sngl":
+	rptc = rptype.casefold()
+	if rptc == "sngl":
 		return TotalDegen(latype,maxwts)
-	elif rptype == "list":
+	elif rptc == "list":
 		n = 0
 		for mw in maxwts:
 			n += TotalDegen(latype,mw)
 		return n
-	elif rptype == "cntd":
+	elif rptc == "cntd":
 		n = 0
 		for mw in maxwts:
 			n += mw[0]*TotalDegen(latype,mw[1])
@@ -1802,14 +1923,15 @@ def AlgProdTotalDegen(latlist, maxwts):
 	return n
 
 def AlgProdTotalDegenXtnd(latlist, rptype, maxwts):
-	if rptype == "sngl":
+	rptc = rptype.casefold()
+	if rptc == "sngl":
 		return AlgProdTotalDegen(latlist,maxwts)
-	elif rptype == "list":
+	elif rptc == "list":
 		n = 0
 		for mw in maxwts:
 			n += AlgProdTotalDegen(latlist,mw)
 		return n
-	elif rptype == "cntd":
+	elif rptc == "cntd":
 		n = 0
 		for mw in maxwts:
 			n += mw[0]*AlgProdTotalDegen(latlist,mw[1])
@@ -1847,7 +1969,7 @@ def ExtractRepIrrepsGeneral(la, rpix, maxrootfunc, repfunc):
 	while True:
 		# Clear out zero ones first
 		wts = rpix.keys()
-		for wt in wts:
+		for wt in list(wts):
 			if rpix[wt][0] == 0: del rpix[wt]
 		if len(rpix) <= 0: break
 		
@@ -1880,7 +2002,7 @@ def ExtractRepOrbitIrreps(la,rpix):
 def MaxAlgProdRepRoot(la,en,enx):
 	rt = en[1]; rtx = enx[1]
 	lalen = len(la)
-	maxdiff = sum([sum(sub_vv(rtx[i],rt[i])) for i in xrange(lalen)])
+	maxdiff = sum([sum(sub_vv(rtx[i],rt[i])) for i in range(lalen)])
 	rtlen = len(rt)
 	if rtlen > lalen:
 		maxdiff += sum(sub_vv(rtx[lalen:],rt[lalen:]))
@@ -1903,7 +2025,7 @@ def AddRootRecords(la,rt1,rt2):
 
 def AddRootVectors(la,v1,v2):
 	lalen = len(la)
-	vsum = [tuple(add_vv(v1[i],v2[i])) for i in xrange(lalen)]
+	vsum = [tuple(add_vv(v1[i],v2[i])) for i in range(lalen)]
 	vsum += add_vv(v1[lalen:],v2[lalen:])
 	return tuple(vsum)
 
@@ -2037,6 +2159,13 @@ def DecomposeRepProdList(latype, maxwtlist):
 		res = DecomposeRepProductXtnd(latype, "cntd", res, "sngl", maxwts)
 	return res
 
+# For algebra products
+def DecomposeAlgProdRepProdList(latlist, maxwtlist):
+	res = ((1, tuple(( tuple(zeros1(latype[1])) for latype in latlist )) ),)
+	for maxwts in maxwtlist:
+		res = DecomposeAlgProdRepProductXtnd(latlist, "cntd", res, "sngl", maxwts)
+	return res	
+
 
 # Irrep Powers
 
@@ -2073,7 +2202,7 @@ def YDTensAddVector(ylst):
 	ylnew = list(ylst)
 	ylnew[0] += 1
 	ylnl.append(tuple(ylnew))
-	for i in xrange(len(ylst)-1):
+	for i in range(len(ylst)-1):
 		if ylst[i] > ylst[i+1]:
 			ylnew = list(ylst)
 			ylnew[i+1] += 1
@@ -2090,15 +2219,9 @@ def memcount(lst):
 		mc[mem] += 1
 	return mc
 
-def prodlist(lst): return reduce(lambda x,y: x*y, lst, 1)
-
-def factorial(n):
-	if n < 0: return 0
-	return prodlist(xrange(1,int(n)+1))
-
 def multnomfac(dgrm):
 	cnts = memcount(dgrm).values()
-	return int(factorial(sum(cnts))/prodlist(map(factorial,cnts)))
+	return int(factorial(sum(cnts))//prodlist(map(factorial,cnts)))
 
 # Find next tensor-product diagram list from a tensor-product list of
 # (multiplicity, contracted Young diagram)
@@ -2135,9 +2258,9 @@ def YDKostkaMatrix(dgrms):
 	for i,dg in enumerate(dgrms):
 		dgl = len(dg)
 		# Do lookback; the += takes care of the multiplicities automatically.
-		for j in xrange(dgl-1):
-			for jx in xrange(j+1,dgl):
-				for k in xrange(1,dg[jx]+1):
+		for j in range(dgl-1):
+			for jx in range(j+1,dgl):
+				for k in range(1,dg[jx]+1):
 					dgx = list(dg)
 					dgx[j] += k
 					dgx[jx] -= k
@@ -2154,16 +2277,16 @@ def YDKostkaMatrix(dgrms):
 			dfsum += d*(d - 2*(j+1))
 		denfac[i] = dfsum
 	kostka = zeros2(dglen,dglen)
-	for i in xrange(dglen):
+	for i in range(dglen):
 		kkrow = kostka[i]
 		kkrow[i] = 1
-		for j in xrange(i+1,dglen):
+		for j in range(i+1,dglen):
 			kknum = 0
 			lbrow = lookback[j]
-			for k in xrange(i,j):
+			for k in range(i,j):
 				kknum += lbrow[k]*kkrow[k]
 			if kknum != 0:
-				kkrow[j] = kknum/(denfac[i] - denfac[j])
+				kkrow[j] = kknum//(denfac[i] - denfac[j])
 	return MatrixTuple(kostka)
 
 # Imitation of Mathematica Tuples function for a list of lists:
@@ -2183,7 +2306,7 @@ def YDNesting(dgrmlist):
 	dmnfs = [dgl[3] for dgl in dgrmlist]
 	dglen = len(dgrms)
 	dgix = MakeYDSetIndexing(dgrms)
-	nesting = [[[] for j in xrange(dglen)] for i in xrange(dglen)]
+	nesting = [[[] for j in range(dglen)] for i in range(dglen)]
 	for i,dgrm in enumerate(dgrms):
 		subdgrms = [TensorPowersYDX[dm-1].yds() for dm in dgrm] \
 			if len(dgrm) > 1 else [dgrms]
@@ -2249,7 +2372,7 @@ def GetTensorPowerYDX(n):
 		TensorPowersYDX.append(TnsrPwrYDX_Cls(dgrmlist))
 		tplen = len(TensorPowersYDX)
 	
-	for k in xrange(tplen+1,n+1):
+	for k in range(tplen+1,n+1):
 		tnsp = TensorPowersYDX[-1]
 		dgrmlist = tnsp.ydcnts
 		dgrmlist = YDTensSetAddVector(dgrmlist)
@@ -2264,8 +2387,8 @@ def GetTensorPowerYDX(n):
 
 def TensorPowerRootMultiplicities(TensPwrYDX,dgix,idxs,mults):
 	mcdict = memcount(idxs)
-	mc = zip(mcdict.values(),mcdict.keys())
-	mc.sort(lambda a,b: cmp(b[0],a[0]))
+	mc = list(zip(mcdict.values(),mcdict.keys()))
+	mc.sort(key=lambda r: r[0], reverse=True)
 	mc = tuple(mc)
 	repyd = tuple([mcm[0] for mcm in mc])
 	ixms = tuple([mults[mcm[1]] for mcm in mc])
@@ -2283,8 +2406,8 @@ def TensorPowerRootMultiplicities(TensPwrYDX,dgix,idxs,mults):
 				mspwr = mspwrs[k]
 				mspl = len(mspwr)
 				if pwr > mspl:
-					for l in xrange(mspl+1,pwr+1):
-						mspwr.append(mspwr[-1]*(ixms[k]-l+1)/l)
+					for l in range(mspl+1,pwr+1):
+						mspwr.append(mspwr[-1]*(ixms[k]-l+1)//l)
 				mprsii *= mspwr[pwr-1]
 			mprsind += mprsii
 		mpres.append(mprsind)
@@ -2300,7 +2423,7 @@ def MakeIndexVectors(vlen,ntot):
 	while True:
 		yield ixvec # Returned values
 		didadvance = False
-		for k in xrange(vlen-1,-1,-1):
+		for k in range(vlen-1,-1,-1):
 			ixvec[k] += 1
 			if ixvec[k] < ntot:
 				ixvec[k+1:] = (vlen-k-1)*[ixvec[k]]
@@ -2330,7 +2453,7 @@ def DecomposeRepRootsPower(lax, rep, pwr, \
 	# index with the weight vector.
 	# Also pull out the root multiplicities for convenience
 	rtdgns = [r[0] for r in rep]
-	rppwrdcmp = [{} for k in xrange(dglen)]
+	rppwrdcmp = [{} for k in range(dglen)]
 	
 	for ixvec in MakeIndexVectors(pwr,len(rtdgns)):
 		tpdgrm,tpmlts = \
@@ -2340,22 +2463,22 @@ def DecomposeRepRootsPower(lax, rep, pwr, \
 		inited = False
 		for ixmult in tpdgrm:
 			rpi = rep[ixmult[1]]
-			for k in xrange(1,2+1):
+			for k in range(1,2+1):
 				if inited:
 					muladdtofunc(rtsum[k],lax,ixmult[0],rpi[k])
 				else:
 					rtsum[k] = mulfunc(lax,ixmult[0],rpi[k])
 			inited = True
-		for k in xrange(1,2+1):
+		for k in range(1,2+1):
 			rtsum[k] = tuplefunc(lax,rtsum[k])
 			
-		for i in xrange(dglen):
+		for i in range(dglen):
 			rtsum[0] = tpmlts[i]
 			if useentry(nsa, rtsum[2]):
 				AddEntryToIndexedRep(rppwrdcmp[i],rtsum)
 	
 	return tuple([ExtractRepIrrepsGeneral(lax,rppwrdcmp[i],maxfunc,repfunc) \
-		for i in xrange(dglen)])
+		for i in range(dglen)])
 
 def RPMul(la,mlt,rt): return mul_sv(mlt,rt)
 
@@ -2379,15 +2502,15 @@ def DecomposeRepPower(latype, maxwts, pwr):
 
 def AlgProdRPMul(lalist,mlt,rt):
 	lalen = len(lalist)
-	res = [mul_sv(mlt,rt[i]) for i in xrange(lalen)]
+	res = [mul_sv(mlt,rt[i]) for i in range(lalen)]
 	res += mul_sv(mlt,rt[lalen:])
 	return res
 
 def AlgProdRPMulAddTo(rtsum,lalist,mlt,rt):
 	lalen = len(lalist)
-	for i in xrange(lalen):
+	for i in range(lalen):
 		muladdto_vsv(rtsum[i],mlt,rt[i])
-	for i in xrange(lalen,len(rtsum)):
+	for i in range(lalen,len(rtsum)):
 		rtsum[i] += mlt*rt[i]
 
 def AlgProdRPTuple(lalist,rt):
@@ -2433,16 +2556,16 @@ def DecomposeRepRootsPwrSym(lax, rep, pwr, sym, \
 	
 	for ixvec in MakeIndexVectors(pwr,len(rtdgns)):
 		tpdgdict = memcount(ixvec)
-		tpdgrm = zip(tpdgdict.values(),tpdgdict.keys())
-		tpdgrm.sort(lambda a,b: cmp(b[0],a[0]))
+		tpdgrm = list(zip(tpdgdict.values(),tpdgdict.keys()))
+		tpdgrm.sort(key=lambda r: r[0], reverse=True)
 		tpdgrm = tuple(tpdgrm)
 		tpmlts = 1
 		for dgi in tpdgrm:
 			dnm = dgi[0]
 			nmi = rtdgns[dgi[1]]
-			for j in xrange(dnm):
+			for j in range(dnm):
 				tpmlts *= (nmi + symx*j)
-				tpmlts /= (j+1)
+				tpmlts //= (j+1)
 		tpmlts = int(tpmlts)
 		
 		rtsum = [0, None, None]
@@ -2450,13 +2573,13 @@ def DecomposeRepRootsPwrSym(lax, rep, pwr, sym, \
 		inited = False
 		for ixmult in tpdgrm:
 			rpi = rep[ixmult[1]]
-			for k in xrange(1,2+1):
+			for k in range(1,2+1):
 				if inited:
 					muladdtofunc(rtsum[k],lax,ixmult[0],rpi[k])
 				else:
 					rtsum[k] = mulfunc(lax,ixmult[0],rpi[k])
 			inited = True
-		for k in xrange(1,2+1):
+		for k in range(1,2+1):
 			rtsum[k] = tuplefunc(lax,rtsum[k])
 		
 		rtsum[0] = tpmlts
@@ -2510,7 +2633,7 @@ def YDAddOne(dgrm, token, start):
 	# token must be absent from the original diagram
 	olddgrm = dgrm + [[]]
 	outlist = []
-	for k in xrange(start,len(olddgrm)):
+	for k in range(start,len(olddgrm)):
 		# Explicit copy to avoid inadvertently adding to the lists
 		# inside a diagram list.
 		# Unlike Mathematica, Python does not have automatic copy-on-write
@@ -2522,7 +2645,7 @@ def YDAddOne(dgrm, token, start):
 		else:
 			apnd = True
 		if apnd:
-			for l in xrange(k):
+			for l in range(k):
 				if newdgrm[l][ndlen-1] == token:
 					apnd = False
 					break
@@ -2536,7 +2659,7 @@ def YDAddSet(dgrm,token,number):
 	# token must be absent from the original diagram
 	outlist = [(dgrm,0)]
 	oldlist = outlist[:]
-	for k in xrange(number):
+	for k in range(number):
 		outlist = []
 		for oldmem in oldlist:
 			outlist += YDAddOne(oldmem[0],token,oldmem[1])
@@ -2593,14 +2716,14 @@ def YDPowerProducts(pwr):
 		dgix[dgrm] for dgrm in YDProduct(dgrm1,dgrm2)]) \
 		for dgrm2 in GetTensorPowerYDX(pwr-k).yds()]) \
 		for dgrm1 in GetTensorPowerYDX(k).yds()]) \
-		for k in xrange(1,pwr)])
+		for k in range(1,pwr)])
 
 YDPowerProductList = []
 
 def GetYDPowerProds(n):
 	llen = len(YDPowerProductList)
 	if llen < n:
-		for k in xrange(llen+1,n+1):
+		for k in range(llen+1,n+1):
 			YDPowerProductList.append(YDPowerProducts(k))
 	
 	return YDPowerProductList[n-1]
@@ -2666,7 +2789,7 @@ def FindMaxRtDcmp(rdlist):
 	maxrd = rdlist[0]
 	ns = len(maxrd[0])
 	for rd in rdlist[1:]:
-		mindiff = min([min(sub_vv(rd[0][k],maxrd[0][k])) for k in xrange(ns)])
+		mindiff = min([min(sub_vv(rd[0][k],maxrd[0][k])) for k in range(ns)])
 		if mindiff >= 0:
 			maxrd = rd		
 	return maxrd
@@ -2694,11 +2817,11 @@ def SAB_DoBranchingRoots(ld,rep):
 		root = rtx[1]
 		subroots = []
 		subweights = []
-		for k in xrange(len(ld.stsms)):
+		for k in range(len(ld.stsms)):
 			srt = mul_vm(root,smnums[k])
-			srt = [(sladens[k]*r)/(laden*smdens[k]) for r in srt]
+			srt = [(sladens[k]*r)//(laden*smdens[k]) for r in srt]
 			swt = mul_vm(srt,slactns[k])
-			swt = [r/sladens[k] for r in swt]
+			swt = [r//sladens[k] for r in swt]
 			subroots.append(tuple(srt))
 			subweights.append(tuple(swt))
 		# Handle both the cases of a vector to multiply the roots and a root index
@@ -2739,7 +2862,7 @@ def WtSpcSubmat(n, spccol, origrts):
 	smat = zeros2(n,m)
 	for i,ix in enumerate(origrts):
 		if ix == -1:
-			for j in xrange(n):
+			for j in range(n):
 				smat[j][i] = spccol[j]
 		elif ix >= 1 and ix <= n:
 			smat[ix-1][i] = 1
@@ -2786,40 +2909,40 @@ def SplitByDemotedRoot(algrts,drt):
 	if family == 1: # A(n)
 		rsdt = []
 		if ix > 1:
-			rd = ((1,ix-1), range(1,ix))
+			rd = ((1,ix-1), list(range(1,ix)))
 			rsdt.append(rd)
 		if ix < n:
-			rd = ((1,n-ix), range(ix+1,n+1))
+			rd = ((1,n-ix), list(range(ix+1,n+1)))
 			rsdt.append(rd)	
 	elif family == 2: # B(n)
 		rsdt = []
 		if ix > 1:
-			rd = ((1,ix-1), range(1,ix))
+			rd = ((1,ix-1), list(range(1,ix)))
 			rsdt.append(rd)
 		if ix < n:
-			rd = ((2,n-ix), range(ix+1,n+1))
+			rd = ((2,n-ix), list(range(ix+1,n+1)))
 			rsdt.append(rd)	
 	elif family == 3: # C(n)
 		rsdt = []
 		if ix > 1:
-			rd = ((1,ix-1), range(1,ix))
+			rd = ((1,ix-1), list(range(1,ix)))
 			rsdt.append(rd)
 		if ix < n:
-			rd = ((3,n-ix), range(ix+1,n+1))
+			rd = ((3,n-ix), list(range(ix+1,n+1)))
 			rsdt.append(rd)	
 	elif family == 4: # D(n)
 		rsdt = []
 		if ix > 1 and ix < n-1:
-			rd = ((1,ix-1), range(1,ix))
+			rd = ((1,ix-1), list(range(1,ix)))
 			rsdt.append(rd)
 		if ix < n-1:
-			rd = ((4,n-ix), range(ix+1,n+1))
+			rd = ((4,n-ix), list(range(ix+1,n+1)))
 			rsdt.append(rd)
 		if ix == n-1:
-			rd = ((1,n-1), range(1,n-1) + [n])
+			rd = ((1,n-1), list(range(1,n-1)) + [n])
 			rsdt.append(rd)
 		if ix == n:
-			rd = ((1,n-1), range(1,n))
+			rd = ((1,n-1), list(range(1,n)))
 			rsdt.append(rd)
 	elif family == 5:
 		if n == 6: # E6
@@ -2896,7 +3019,7 @@ def MakeMultiRootDemoter(latype,dmrts):
 	if min(dmrts) < 1: return None
 	if max(dmrts) > n: return None
 	if len(dmrts) > len(set(dmrts)): return None
-	splt = ((latype,range(1,n+1)),)
+	splt = ((latype,list(range(1,n+1))),)
 	
 	# Split by each one separately -- easiest to implement
 	for drt in dmrts:
@@ -2915,9 +3038,14 @@ def MakeRootDemoter(latype,m):
 	return MakeMultiRootDemoter(latype,(m,))
 
 def ListRootDemotions(latype):
-	for m in xrange(latype[1]):
-		ld = MakeRootDemoter(latype,m)
-		print m, ld.SubAlgebras(), ld.SubAlgebraNames()
+	rdlist = []
+	for m in range(latype[1]):
+		ld = MakeRootDemoter(latype,m+1)
+		sa = ld.SubAlgebras()
+		u1s = ld.u1s
+		sax = sa + u1s
+		rdlist.append(sax)
+	return tuple(rdlist)
 
 
 # Extension Splitting
@@ -2933,28 +3061,28 @@ def MakeExtensionSplitter(latype,m):
 	
 	splt = []
 	if family == 1: # A(n)
-		splt.append((latype, range(m+1,n+1)+[-1]+range(1,m)))
+		splt.append((latype, list(range(m+1,n+1))+[-1]+list(range(1,m))))
 	elif family == 2: # B(n)
 		if m == 1:
-			splt.append((latype, [-1]+range(2,n+1)))
+			splt.append((latype, [-1]+list(range(2,n+1))))
 		else:
-			splt.append(((4,m), range(m-1,0,-1)+[-1]))
+			splt.append(((4,m), list(range(m-1,0,-1))+[-1]))
 			if m < n:
-				splt.append(((2,n-m), range(m+1,n+1)))
+				splt.append(((2,n-m), list(range(m+1,n+1))))
 	elif family == 3: # C(n)
-		splt.append(((3,m), range(m-1,0,-1)+[-1]))
+		splt.append(((3,m), list(range(m-1,0,-1))+[-1]))
 		if m < n:
-			splt.append(((3,n-m), range(m+1,n+1)))
+			splt.append(((3,n-m), list(range(m+1,n+1))))
 	elif family == 4: # D(n)
 		if m == 1:
-			splt.append((latype, [-1]+range(2,n+1)))
+			splt.append((latype, [-1]+list(range(2,n+1))))
 		elif m >= n-1:
 			mx = (2*n-1) - m
-			splt.append((latype, [mx]+range(n-2,0,-1)+[-1]))
+			splt.append((latype, [mx]+list(range(n-2,0,-1))+[-1]))
 		else:
-			splt.append(((4,m), range(m-1,0,-1)+[-1]))
+			splt.append(((4,m), list(range(m-1,0,-1))+[-1]))
 			if m < n:
-				splt.append(((4,n-m), range(m+1,n+1)))
+				splt.append(((4,n-m), list(range(m+1,n+1))))
 	elif family == 5:
 		if n == 6: # E6
 			if m == 1:
@@ -3021,18 +3149,21 @@ def MakeExtensionSplitter(latype,m):
 	if len(splt) == 0: return None
 	
 	la = GetLieAlgebra(latype)
-	metdiag = [la.metric[i][i] for i in xrange(n)]
+	metdiag = [la.metric[i][i] for i in range(n)]
 	mdmax = max(metdiag)
 	psrtmax = la.posroots[-1][0]
-	spccol = [- psrtmax[i]*metdiag[i]/mdmax for i in xrange(n)]
+	spccol = [- psrtmax[i]*metdiag[i]//mdmax for i in range(n)]
 	
 	sdlist = WSRtSbmtList(latype, spccol, splt)
 	return SubAlgebraBrancher(latype, sdlist, u1s)
 
 def ListExtensionSplits(latype):
-	for m in xrange(latype[1]):
-		ld = MakeExtensionSplitter(latype,m)
-		print m, ld.SubAlgebras(), ld.SubAlgebraNames()
+	rdlist = []
+	for m in range(latype[1]):
+		ld = MakeExtensionSplitter(latype,m+1)
+		sa = ld.SubAlgebras()
+		rdlist.append(sa)
+	return tuple(rdlist)
 
 
 # Additional Branching-Rule Generators
@@ -3050,25 +3181,25 @@ def ListExtensionSplits(latype):
 def SubalgMultSU(suords):
 	nso = len(suords)
 	soprod = 1
-	for k in xrange(nso): soprod *= suords[k]
+	for k in range(nso): soprod *= suords[k]
 	n = soprod
 	nt = n - 1
 	latype = (1,nt)
 	vecproj = zeros2(nt,n)
-	for k in xrange(nt):
+	for k in range(nt):
 		vecproj[k][k] = 1
 		vecproj[k][k+1] = -1
 	stsms = []
-	for kso in xrange(nso):
+	for kso in range(nso):
 		sm = suords[kso]
 		smt = sm - 1
 		stype = (1, smt)
 		smat = zeros2(n,smt)
 		sstr = 1
-		for k in xrange(kso+1,nso): sstr *= suords[k]
-		for k in xrange(n):
-			for ks in xrange(smt):
-				ko = (k / sstr) % sm
+		for k in range(kso+1,nso): sstr *= suords[k]
+		for k in range(n):
+			for ks in range(smt):
+				ko = (k // sstr) % sm
 				if ko == ks: smat[k][ks] = 1
 				if ko == ks+1: smat[k][ks] = -1
 		la = GetLieAlgebra(stype)
@@ -3087,7 +3218,7 @@ def SubalgMultSU(suords):
 def SubalgMultSOSp(sospords):
 	nso = len(sospords)
 	soprod = 1
-	for k in xrange(nso): soprod *= sospords[k]
+	for k in range(nso): soprod *= sospords[k]
 	# Construct a projection matrix for roots onto vector rep. 
 	# Also get the type. Much like the previous function, 
 	# it's designed to turn the vector rep
@@ -3096,47 +3227,47 @@ def SubalgMultSOSp(sospords):
 		if soprod % 2 == 0:
 			# SO(even): Dn
 			n = soprod
-			nt = n/2
+			nt = n//2
 			latype = (4,nt)
 			vpbase = zeros2(nt,nt)
-			for k in xrange(nt-1):
+			for k in range(nt-1):
 				vpbase[k][k] = 1
 				vpbase[k+1][k] = -1
 			vpbase[nt-2][nt-1] = vpbase[nt-1][nt-1] = 1
 			vecproj = zeros2(nt,n)
-			for k in xrange(nt):
-				for kx in xrange(nt):
+			for k in range(nt):
+				for kx in range(nt):
 					vecproj[k][kx] = vpbase[kx][k]
 					vecproj[k][(n-1)-kx] = - vpbase[kx][k]
 		else:
 			# SO(odd): Bn
 			n = soprod
-			nt = (n-1)/2
+			nt = (n-1)//2
 			latype = (2,nt)
 			vpbase = zeros2(nt,nt)
-			for k in xrange(nt-1):
+			for k in range(nt-1):
 				vpbase[k][k] = 1
 				vpbase[k+1][k] = -1
 			vpbase[nt-1][nt-1] = 1
 			vecproj = zeros2(nt,n)
-			for k in xrange(nt):
-				for kx in xrange(nt):
+			for k in range(nt):
+				for kx in range(nt):
 					vecproj[k][kx] = vpbase[kx][k]
 					vecproj[k][(n-1)-kx] = - vpbase[kx][k]
 	else:
 		if soprod % 2 == 0:
 			# Sp(even): Cn
 			n = - soprod
-			nt = n/2
+			nt = n//2
 			latype = (3,nt)
 			vpbase = zeros2(nt,nt)
-			for k in xrange(nt-1):
+			for k in range(nt-1):
 				vpbase[k][k] = 1
 				vpbase[k+1][k] = -1
 			vpbase[nt-1][nt-1] = 2
 			vecproj = zeros2(nt,n)
-			for k in xrange(nt):
-				for kx in xrange(nt):
+			for k in range(nt):
+				for kx in range(nt):
 					vecproj[k][kx] = vpbase[kx][k]
 					vecproj[k][(n-1)-kx] = - vpbase[kx][k]
 		else:
@@ -3151,15 +3282,15 @@ def SubalgMultSOSp(sospords):
 			if sm % 2 == 0:
 				# SO(even): Dn -- works for root-vector dimension 1
 				sma = sm
-				smt = sma/2
+				smt = sma//2
 				stype = (4,smt)
 				smat = zeros2(n,smt)
 				sstr = 1
-				for k in xrange(kso+1,nso): sstr *= sospords[k]
+				for k in range(kso+1,nso): sstr *= sospords[k]
 				if sstr < 0: sstr *= -1
-				for k in xrange(n):
-					ko = (k/sstr) % sma
-					for ks in xrange(smt):
+				for k in range(n):
+					ko = (k//sstr) % sma
+					for ks in range(smt):
 						if ko == ks: smat[k][ks] = Fraction(1,2)
 						if ko == ks+1: smat[k][ks] = -Fraction(1,2)
 						if ko == smt-2 and ks == smt-1: smat[k][ks] = Fraction(1,2)
@@ -3169,15 +3300,15 @@ def SubalgMultSOSp(sospords):
 			else:
 				# SO(odd): Bn
 				sma = sm
-				smt = (sma-1)/2
+				smt = (sma-1)//2
 				stype = (2,smt)
 				smat = zeros2(n,smt)
 				sstr = 1
-				for k in xrange(kso+1,nso): sstr *= sospords[k]
+				for k in range(kso+1,nso): sstr *= sospords[k]
 				if sstr < 0: sstr *= -1
-				for k in xrange(n):
-					ko = (k/sstr) % sma
-					for ks in xrange(smt):
+				for k in range(n):
+					ko = (k//sstr) % sma
+					for ks in range(smt):
 						if ko == ks: smat[k][ks] = (1 if ks==smt-1 else Fraction(1,2))
 						if ko == ks+1: smat[k][ks] = -Fraction(1,2)
 						if ko == (sma-1) - ks: smat[k][ks] = -(1 if ks==smt-1 else Fraction(1,2))
@@ -3186,15 +3317,15 @@ def SubalgMultSOSp(sospords):
 			if sm % 2 == 0:		
 				# Sp(even): Cn
 				sma = -sm
-				smt = sma/2
+				smt = sma//2
 				stype = (3,smt)
 				smat = zeros2(n,smt)
 				sstr = 1
-				for k in xrange(kso+1,nso): sstr *= sospords[k]
+				for k in range(kso+1,nso): sstr *= sospords[k]
 				if sstr < 0: sstr *= -1
-				for k in xrange(n):
-					ko = (k/sstr) % sma
-					for ks in xrange(smt):
+				for k in range(n):
+					ko = (k//sstr) % sma
+					for ks in range(smt):
 						if ko == ks: smat[k][ks] = Fraction(1,2)
 						if ko == ks+1: smat[k][ks] = -Fraction(1,2)
 						if ko == (sma-1) - ks: smat[k][ks] = -Fraction(1,2)
@@ -3262,7 +3393,7 @@ def SubalgSOEvenOdd(n,m):
 		k = m
 		subtype = (2,k)
 		smat = zeros2(n,k)
-		for i in xrange(2,k): smat[m-i][i-1] = 1
+		for i in range(2,k): smat[m-i][i-1] = 1
 		if m > 1:
 			smat[0] = ((k-1)*[-1]) + [0]
 			smat[m-1] = [0] + ((k-1)*[-1])
@@ -3272,7 +3403,7 @@ def SubalgSOEvenOdd(n,m):
 	k = n - m - 1
 	subtype = (2,k)
 	smat = zeros2(n,k)
-	for i in xrange(1,k): smat[m+i-1][i-1] = 1
+	for i in range(1,k): smat[m+i-1][i-1] = 1
 	if m > 0:
 		smat[m-1] = k*[-1]
 	smat[n-1][k-1] = smat[n-2][k-1] = 1
@@ -3281,22 +3412,25 @@ def SubalgSOEvenOdd(n,m):
 
 # Turns SU(n) / A(n-1) into SO(n) / D(n/2) or B((n-1)/2)
 def SubalgSUSO(n):
-	if n % 2 == 0:
+	if n == 2:
+		# SU(2) to SO(2)
+		return SubAlgebraBrancher((1,1),(),(1,))
+	elif n % 2 == 0:
 		# Even n
-		nx = n/2
+		nx = n//2
 		stype = (4,nx)
 		smat = zeros2(n-1,nx)
-		for k in xrange(nx-1):
+		for k in range(nx-1):
 			smat[k][k] = 1
 			smat[n-k-2][k] = 1
 		smat[nx-1][nx-2] = -1
 		smat[nx-1][nx-1] = 1
 	else:
 		# Odd n
-		nx = (n-1)/2
+		nx = (n-1)//2
 		stype = (2,nx)
 		smat = zeros2(n-1,nx)
-		for k in xrange(nx):
+		for k in range(nx):
 			smat[k][k] = 1
 			smat[n-k-2][k] = 1
 	stsms = ((stype, smat),)
@@ -3305,7 +3439,7 @@ def SubalgSUSO(n):
 # Turns SU(2n) / A(2n-1) into Sp(2n) / C(n)
 def SubalgSUSp(n):
 	smat = zeros2(2*n-1,n)
-	for k in xrange(n-1):
+	for k in range(n-1):
 		smat[k][k] = 1
 		smat[2*n-k-2][k] = 1
 	smat[n-1][n-1] = 1
@@ -3323,25 +3457,14 @@ def SubalgHeightA1(latype):
 # Reduces a member of the four infinite families to
 # another algebra by taking the source algebra's vector rep
 # (SU and Sp fundamental) to the destination algebra's supplied rep.
-
-def SAVNumOrder(x1,x2):
-	if x1 < x2: return 1
-	elif x1 > x2: return -1
-	else: return 0
-
-def SAVRootOrder(rt1,rt2):
-	t1 = sum(rt1)
-	t2 = sum(rt2)
-	ord = SAVNumOrder(t2,t1)
-	if ord != 0: return ord
+def RepWtsFlattened(latype, maxwts):
+	rep = GetRep(latype, maxwts)
+	mat = []
+	for r in rep:
+		for k in range(r[0]):
+			mat.append(r[2])
 	
-	n = len(rt1)
-	for k in xrange(n):
-		ord = SAVNumOrder(rt2[k],rt1[k])
-		if ord != 0: return ord
-	
-	return 0
-	
+	return tuple(mat)
 
 def SubalgVector(family,dsttype,dstwts):
 	ndst = TotalDegen(dsttype,dstwts)
@@ -3368,90 +3491,43 @@ def SubalgVector(family,dsttype,dstwts):
 	else:
 		return None
 	
-	# Get the destination rep, expand it, sort it, and de-integerize it
-	dstrep = GetRep(dsttype, dstwts)
-	drxp = flatten([wr[0]*[wr[1]] for wr in dstrep])
-	drxp.sort(SAVRootOrder)
+	srctype = (family,n)
+	vecwts = [1] + (n-1)*[0]
+	srcrep = RepWtsFlattened(srctype,vecwts)
+	dstrep = RepWtsFlattened(dsttype,dstwts)
 	
-	la = GetLieAlgebra(dsttype)
-	den = la.ictnden
-	drxp = [[Fraction(x,den) for x in rt] for rt in drxp]
+	srtp = transpose(srcrep)
+	srpd = mul_mm(srtp,srcrep)
+	dspd = mul_mm(srtp,dstrep)
 	
-	# Is the destination rep (pseudo)real?
-	if family >= 2:
-		for k in xrange(len(drxp)):
-			rt1 = drxp[k]
-			rt2 = drxp[-k-1]
-			for l in xrange(len(rt1)):
-				if rt1[l] != - rt2[l]:
-					return None
+	srpdinv = MatrixInverse(srpd)
+	prjmatorig = mul_mm(srpdinv,dspd)
 	
-	# The inverse of the source rep
-	if family == 1:
-		# A(n)
-		srcinv = []
-		for k in xrange(n):
-			row = (n+1)*[0]
-			row[k] = 1
-			row[k+1] = -1
-			srcinv.append(row)		
-	elif family == 2:
-		# B(n)
-		srcinv = []
-		for k in xrange(n-1):
-			row = (2*n+1)*[0]
-			row[k] = Fraction(1,2)
-			row[k+1] = - Fraction(1,2)
-			row[-k-1] = - Fraction(1,2)
-			row[-k-2] = Fraction(1,2)
-			srcinv.append(row)
-		row = (2*n+1)*[0]
-		row[n-1] = Fraction(1,2)
-		row[-n] = - Fraction(1,2)
-		srcinv.append(row)	
-	elif family == 3:
-		# C(n)
-		srcinv = []
-		for k in xrange(n-1):
-			row = (2*n)*[0]
-			row[k] = Fraction(1,2)
-			row[k+1] = - Fraction(1,2)
-			row[-k-1] = - Fraction(1,2)
-			row[-k-2] = Fraction(1,2)
-			srcinv.append(row)
-		row = (2*n)*[0]
-		row[n-1] = 1
-		row[-n] = - 1
-		srcinv.append(row)
-	elif family == 4:
-		# D(n)
-		srcinv = []
-		for k in xrange(n-2):
-			row = (2*n)*[0]
-			row[k] = Fraction(1,2)
-			row[k+1] = - Fraction(1,2)
-			row[-k-1] = - Fraction(1,2)
-			row[-k-2] = Fraction(1,2)
-			srcinv.append(row)
-		row = (2*n)*[0]
-		row[n-2] = Fraction(1,2)
-		row[n-1] = Fraction(1,2)
-		row[-n+1] = - Fraction(1,2)
-		row[-n] = - Fraction(1,2)
-		srcinv.append(row)
-		row = (2*n)*[0]
-		row[n-2] = Fraction(1,2)
-		row[n-1] = - Fraction(1,2)
-		row[-n+1] = - Fraction(1,2)
-		row[-n] = Fraction(1,2)
-		srcinv.append(row)
+	# Turn the projection matrix from Fraction type to integer type,
+	# returning None if there are any non-integers in it.
+	prjmat = []
+	for roworig in prjmatorig:
+		row = []
+		for valorig in roworig:
+			if valorig.denominator != 1: return None
+			val = valorig.numerator
+			row.append(val)
+		prjmat.append(row)
 	
-	proj = mul_mm(srcinv,drxp)
+	prjmat = tuple(prjmat)
 	
-	latype = (family,n)
-	stsms = ((dsttype,proj),)
-	u1s = ()
-	return SubAlgebraBrancher(latype,stsms,u1s)
+	# Check to see if the projection matrix gives the right result on this rep:
+	# zero difference
+	srpj = mul_mm(srcrep,prjmat)
+	diff = tuple( ( sub_vv(v[0],v[1]) for v in zip(srpj,dstrep) ) )
+	for row in diff:
+		for val in row:
+			if val != 0: return None
+	
+	# From weight space to root space
+	prjmatrt = SubmatWtToRoot(srctype, dsttype, prjmat)
+	
+	return SubAlgebraBrancher(srctype,((dsttype,prjmatrt),),())
 
 # Some extra ones named individually.
 # (Parent algebra) (subalgebras)
@@ -3550,7 +3626,7 @@ def ConcatBranchers(ld0, ix, ld1):
 	newu1s = list(ld0.u1s)
 	for u1fac in ld1.u1s:
 		if type(u1fac) == type(0):
-			u1vec = [1 if (i == u1fac) else 0 for i in xrange(1,ld1.latype[1]+1)]
+			u1vec = [1 if (i == u1fac) else 0 for i in range(1,ld1.latype[1]+1)]
 		else:
 			u1vec = u1fac
 		newu1s.append(mul_mv(submat0,u1vec))
@@ -3558,7 +3634,7 @@ def ConcatBranchers(ld0, ix, ld1):
 	return SubAlgebraBrancher(ld0.latype, stsms, newu1s)
 	
 
-def BrancherRenameA1B1C1(ld0, ix, newfam):
+def BrancherRenameABC1(ld0, ix, newfam):
 	if ix <= 0 or ix > len(ld0.stsms): return
 	if newfam < 1 or newfam > 3: return
 	
@@ -3576,7 +3652,7 @@ def BrancherRenameA1B1C1(ld0, ix, newfam):
 	
 	return SubAlgebraBrancher(ld0.latype, stsms, ld0.u1s)
 
-def BrancherRenameB2C2(ld0, ix):
+def BrancherRenameBC2(ld0, ix):
 	if ix <= 0 or ix > len(ld0.stsms): return
 	
 	stsms = []
@@ -3597,7 +3673,7 @@ def BrancherRenameB2C2(ld0, ix):
 	return SubAlgebraBrancher(ld0.latype, stsms, ld0.u1s)
 
 
-def BrancherRenameA3D3(ld0, ix):
+def BrancherRenameAD3(ld0, ix):
 	if ix <= 0 or ix > len(ld0.stsms): return
 	
 	stsms = []
@@ -3693,14 +3769,10 @@ def BrancherConjugate(ld0, cjixs):
 	return SubAlgebraBrancher(ld0.latype, stsms, ld0.u1s)
 
 
-def BrancherConjgD4(ld0, ix, newrts):
+def BrancherConjugateD4(ld0, ix, newrts):
 	if ix <= 0 or ix > len(ld0.stsms): return
-	if len(newrts) != 4: return
-	if newrts[1] != 2: return
-	nwrsrt = list(newrts)
-	nwrsrt.sort()
-	for i, nr in enumerate(nwrsrt):
-		if nr != (i+1): return
+	
+	nrxp = MakeConjgIndicesD4(newrts)
 	
 	stsms = []
 	for i,stsm0 in enumerate(ld0.stsms):
@@ -3711,7 +3783,7 @@ def BrancherConjgD4(ld0, ix, newrts):
 			smat = []
 			for smrow in stsm0[1]:
 				nwsmr = []
-				for nwix in newrts:
+				for nwix in nrxp:
 					nwsmr.append(smrow[nwix-1])
 				smat.append(nwsmr)
 			stsms.append((latype,smat))
