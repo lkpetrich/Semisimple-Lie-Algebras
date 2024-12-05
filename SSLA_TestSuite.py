@@ -486,6 +486,10 @@ if "sbmp" in Tests:
 	def ShowSubalgMultBCDn(stypes, wts):
 		pes(stypes, "--")
 		ShowSubalgBranching(SubalgMultBCDn(stypes), (wts,))
+
+	def ShowSubalgMultSOSp(ssizes, wts):
+		pes(ssizes, "--")
+		ShowSubalgBranching(SubalgMultSOSp(ssizes), (wts,))
 	
 	ShowSubalgMultAn((3,1), (1,0,0,0,0,0,0))
 	ShowSubalgMultAn((2,2), (1,0,0,0,0,0,0,0))
@@ -499,6 +503,10 @@ if "sbmp" in Tests:
 	ShowSubalgMultBCDn(((3,3),(2,1)),(1,0,0,0,0,0,0,0,0))
 	
 	ShowSubalgMultBCDn(((2,2),(2,1)),(1,0,0,0,0,0,0))
+	
+	ShowSubalgMultSOSp((2,2,2),(1,0,0,0))
+	
+	ShowSubalgMultSOSp((-2,2,4),(1,0,0,0,0,0,0,0))
 
 
 if "sbeo" in Tests:
