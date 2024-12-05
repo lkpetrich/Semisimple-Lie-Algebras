@@ -34,11 +34,10 @@ void LABrancher::Setup()
 	ResAlg.Params.ParamList.clear();
 	ResAlg.Params.NumU1s = U1Indices.size() + U1SrcVecs.get_rows();
 	
-	for (vector<LABrProjector>::iterator PrjIter = Projectors.begin();
-		PrjIter != Projectors.end(); PrjIter++)
+	for (auto &Prj: Projectors)
 	{
-		ResAlg.Params.ParamList.push_back(PrjIter->Params);
-		PrjIter->Setup();
+		ResAlg.Params.ParamList.push_back(Prj.Params);
+		Prj.Setup();
 	}
 	
 	// Integerize the U1-vector matrix
@@ -68,7 +67,7 @@ void LABrancher::Setup()
 
 // For assembling irreps from Weyl orbits
 // instead of from their entire contents
-static bool IsDomWt(LAINT *Wts, size_t n)
+static bool IsDomWt(const LAINT *Wts, size_t n)
 {
 	if (n == 0) return true;
 	LAINT minwt;
@@ -77,33 +76,32 @@ static bool IsDomWt(LAINT *Wts, size_t n)
 }
 
 
-LACntdMaxWtList LABrancher::DoBranching(LieAlgRep &Rep)
+LACntdMaxWtList LABrancher::DoBranching(const LieAlgRep &Rep) const
 {
 	LAINT ResRank = ResAlg.Params.get_rank();
-	vector<LAINT> Roots(ResRank), Weights(ResRank);
+	LAINT_VECTOR Roots(ResRank), Weights(ResRank);
 	LieAlgRepBuilder Bld(ResRank);
 	LieAlgebra &OrigLA = GetLieAlgebra(OrigAlg.Params);
 	
 	for (size_t i=0; i<Rep.Degens.size(); i++)
 	{
 		LAINT Degen = Rep.Degens[i];
-		MatrixRow<LAINT> OrigRoots(Rep.Roots,i);
+		const LAINT_MATRIX_ROW_CONST OrigRoots(Rep.Roots,i);
 		
 		// Construct the root and weight vectors
 		LAINT ColBase = 0;
 		
 		// The semisimple part
-		for (vector<LABrProjector>::iterator PrjIter = Projectors.begin();
-			PrjIter != Projectors.end(); PrjIter++)
+		for (const auto &Prj: Projectors)
 		{
-			mul_vm(&Roots[ColBase],&OrigRoots[0],PrjIter->SubMatNum);
+			mul_vm(&Roots[ColBase],&OrigRoots[0],Prj.SubMatNum);
 			
-			LieAlgebra &PrjLA = GetLieAlgebra(PrjIter->Params);
-			LAINT PrjRank = PrjIter->Params.rank;
+			LieAlgebra &PrjLA = GetLieAlgebra(Prj.Params);
+			LAINT PrjRank = Prj.Params.rank;
 			LAINT NextColBase = ColBase + PrjRank;
 			for (LAINT j=ColBase; j<NextColBase; j++)
 				Roots[j] = (PrjLA.InvCtnDen*Roots[j]) /
-					(OrigLA.InvCtnDen*PrjIter->SubMatDen);
+					(OrigLA.InvCtnDen*Prj.SubMatDen);
 			
 			mul_vm(&Weights[ColBase],&Roots[ColBase],PrjLA.Cartan);
 			for (LAINT j=ColBase; j<NextColBase; j++)
@@ -115,10 +113,9 @@ LACntdMaxWtList LABrancher::DoBranching(LieAlgRep &Rep)
 		LAINT NumWts = ColBase;
 		
 		// The U(1) part
-		for (vector<LAINT>::iterator U1InIter = U1Indices.begin();
-			U1InIter != U1Indices.end(); U1InIter++)
+		for (auto U1In: U1Indices)
 		{
-			Weights[ColBase] = Roots[ColBase] = OrigRoots[(*U1InIter)-1];
+			Weights[ColBase] = Roots[ColBase] = OrigRoots[U1In-1];
 			ColBase++;
 		}
 		mul_mv(&Roots[ColBase],U1SrcVecNums,&OrigRoots[0]);
@@ -140,8 +137,8 @@ LACntdMaxWtList LABrancher::DoBranching(LieAlgRep &Rep)
 // list of original root for each result root.
 // Original root = -1 makes the special column,
 // intended for extension splitting.
-static void WtSpcSubMat(Matrix<LAINT> &SubMat, LAINT n,
-	vector<LAINT> &SpcCol, vector<LAINT> &OrigRts)
+static void WtSpcSubMat(LAINT_MATRIX &SubMat, LAINT n,
+	const LAINT_VECTOR &SpcCol, const LAINT_VECTOR &OrigRts)
 {
 	LAINT m = OrigRts.size();
 	SubMat.resize(n,m);
@@ -161,8 +158,10 @@ static void WtSpcSubMat(Matrix<LAINT> &SubMat, LAINT n,
 }
 
 // Weight space to root space
-static void SubMatWtToRoot(Matrix<BrSubMatEntry>& DestSubMat, LieAlgebraParams &OrigParams,
-	LieAlgebraParams &SubParams, Matrix<LAINT> &OrigSubMat)
+static void SubMatWtToRoot(Matrix<BrSubMatEntry>& DestSubMat,
+	const LieAlgebraParams &OrigParams,
+	const LieAlgebraParams &SubParams,
+	const LAINT_MATRIX &OrigSubMat)
 {
 	LieAlgebra &OrigLA = GetLieAlgebra(OrigParams);
 	LieAlgebra &SubLA = GetLieAlgebra(SubParams);
@@ -180,51 +179,58 @@ static void SubMatWtToRoot(Matrix<BrSubMatEntry>& DestSubMat, LieAlgebraParams &
 struct RDSegment
 {
 	LieAlgebraParams Params;
-	vector<LAINT> Roots;
+	LAINT_VECTOR Roots;
 	
 	void resize() {Roots.resize(Params.rank);}
 };
 
-static void SegmentToProjector(LABrProjector &Proj, LieAlgebraParams &OrigParams,
-	vector<LAINT> &SpcCol, RDSegment &Segment)
+static void SegmentToProjector(LABrProjector &Proj,
+	const LieAlgebraParams &OrigParams,
+	const LAINT_VECTOR &SpcCol,
+	const RDSegment &Segment)
 {
 	Proj.Params = Segment.Params;
-	Matrix<LAINT> IntmdSubMat;
+	LAINT_MATRIX IntmdSubMat;
 	WtSpcSubMat(IntmdSubMat, OrigParams.rank, SpcCol, Segment.Roots);
 	SubMatWtToRoot(Proj.SubMatrix, OrigParams, Segment.Params, IntmdSubMat);
 }
 
-static void SegListToBrancher(LABrancher &Brancher, vector<LAINT> &SpcCol,
-	vector<RDSegment> &SegList)
+static void SegListToBrancher(LABrancher &Brancher,
+	const LAINT_VECTOR &SpcCol,
+	const std::vector<RDSegment> &SegList)
 {
-	for (vector<RDSegment>::iterator SegIter = SegList.begin();
-		SegIter != SegList.end(); SegIter++)
+	for (const auto &Seg: SegList)
 	{
 		LABrProjector Proj;
-		SegmentToProjector(Proj, Brancher.OrigAlg.Params, SpcCol, *SegIter);
+		SegmentToProjector(Proj, Brancher.OrigAlg.Params, SpcCol, Seg);
 		Brancher.Projectors.push_back(Proj);
 	}
 }
 
-static void UnpackRDSegmentData(vector<RDSegment> &RootSplit, const LAINT *SegmentData)
+
+static void UnpackRDSegmentData(std::vector<RDSegment> &RootSplit,
+	const LAINT_VECTOR &SegmentData)
 {
-	if (!SegmentData) return;
+	if (SegmentData.size() == 0) return;
 	RDSegment Segment;
-	const LAINT *SD = SegmentData;
-	LAINT numsegs = *(SD++);
+	const LAINT_VECTOR &SD = SegmentData; // For convenience
+	size_t ix = 0;
+	LAINT numsegs = SD[ix++];
 	for (LAINT iseg=0; iseg<numsegs; iseg++)
 	{
-		Segment.Params.family = *(SD++);
-		Segment.Params.rank = *(SD++);
+		Segment.Params.family = SD[ix++];
+		Segment.Params.rank = SD[ix++];
 		Segment.resize();
 		for (LAINT i=0; i<Segment.Params.rank; i++)
-			Segment.Roots[i] = *(SD++);
+			Segment.Roots[i] = SD[ix++];
 		RootSplit.push_back(Segment);
 	}
 }
 
 
-static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, LAINT RootNo)
+
+static void SplitByDemotedRoot(std::vector<RDSegment> &RootSplit,
+	const RDSegment &RSMem, LAINT RootNo)
 {
 	// Appends the algebra-split segments to RootSplit
 	LAINT family = RSMem.Params.family;
@@ -254,7 +260,8 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 	// Append each one to RootSplit, count off as one goes
 	LAINT OldNRSCount = RootSplit.size();
 	RDSegment Segment;
-	const LAINT *SegData = NULL;
+	
+	LAINT_VECTOR SegData;
 	
 	switch(family)
 	{
@@ -365,37 +372,37 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   4, 5,  5, 4, 3, 2, 6};
+				const LAINT_VECTOR Data = {1,   4, 5,  5, 4, 3, 2, 6};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 1,  1,   1, 4,  6, 3, 4, 5};
+				const LAINT_VECTOR Data = {2,   1, 1,  1,   1, 4,  6, 3, 4, 5};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {3,   1, 2,  1, 2,   1, 2,  4, 5,   1, 1,  6};
+				const LAINT_VECTOR Data = {3,   1, 2,  1, 2,   1, 2,  4, 5,   1, 1,  6};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {2,   1, 4,  1, 2, 3, 6,   1, 1,  5};
+				const LAINT_VECTOR Data = {2,   1, 4,  1, 2, 3, 6,   1, 1,  5};
 				SegData = Data;
 				}
 				break;
 			case 5:
 				{
-				const LAINT Data[] = {1,   4, 5,  1, 2, 3, 4, 6};
+				const LAINT_VECTOR Data = {1,   4, 5,  1, 2, 3, 4, 6};
 				SegData = Data;
 				}
 				break;
 			case 6:
 				{
-				const LAINT Data[] = {1,   1, 5,  1, 2, 3, 4, 5};
+				const LAINT_VECTOR Data = {1,   1, 5,  1, 2, 3, 4, 5};
 				SegData = Data;
 				}
 				break;
@@ -406,43 +413,43 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   4, 6,  6, 5, 4, 3, 2, 7};
+				const LAINT_VECTOR Data = {1,   4, 6,  6, 5, 4, 3, 2, 7};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 1,  1,   1, 5,  7, 3, 4, 5, 6};
+				const LAINT_VECTOR Data = {2,   1, 1,  1,   1, 5,  7, 3, 4, 5, 6};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {3,   1, 2,  1, 2,   1, 3,  4, 5, 6,   1, 1,  7};
+				const LAINT_VECTOR Data = {3,   1, 2,  1, 2,   1, 3,  4, 5, 6,   1, 1,  7};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {2,   1, 4,  1, 2, 3, 7,   1, 2,  5, 6};
+				const LAINT_VECTOR Data = {2,   1, 4,  1, 2, 3, 7,   1, 2,  5, 6};
 				SegData = Data;
 				}
 				break;
 			case 5:
 				{
-				const LAINT Data[] = {2,   4, 5,  1, 2, 3, 4, 7,   1, 1,  6};
+				const LAINT_VECTOR Data = {2,   4, 5,  1, 2, 3, 4, 7,   1, 1,  6};
 				SegData = Data;
 				}
 				break;
 			case 6:
 				{
-				const LAINT Data[] = {1,   5, 6,  1, 2, 3, 4, 5, 7};
+				const LAINT_VECTOR Data = {1,   5, 6,  1, 2, 3, 4, 5, 7};
 				SegData = Data;
 				}
 				break;
 			case 7:
 				{
-				const LAINT Data[] = {1,   1, 6,  1, 2, 3, 4, 5, 6};
+				const LAINT_VECTOR Data = {1,   1, 6,  1, 2, 3, 4, 5, 6};
 				SegData = Data;
 				}
 				break;
@@ -453,49 +460,49 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   4, 7,  7, 6, 5, 4, 3, 2, 8};
+				const LAINT_VECTOR Data = {1,   4, 7,  7, 6, 5, 4, 3, 2, 8};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 1,  1,   1, 6,  8, 3, 4, 5, 6, 7};
+				const LAINT_VECTOR Data = {2,   1, 1,  1,   1, 6,  8, 3, 4, 5, 6, 7};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {3,   1, 2,  1, 2,   1, 4,  4, 5, 6, 7,   1, 1,  8};
+				const LAINT_VECTOR Data = {3,   1, 2,  1, 2,   1, 4,  4, 5, 6, 7,   1, 1,  8};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {2,   1, 4,  1, 2, 3, 8,   1, 3,  5, 6, 7};
+				const LAINT_VECTOR Data = {2,   1, 4,  1, 2, 3, 8,   1, 3,  5, 6, 7};
 				SegData = Data;
 				}
 				break;
 			case 5:
 				{
-				const LAINT Data[] = {2,   4, 5,  1, 2, 3, 4, 8,   1, 2,  6, 7};
+				const LAINT_VECTOR Data = {2,   4, 5,  1, 2, 3, 4, 8,   1, 2,  6, 7};
 				SegData = Data;
 				}
 				break;
 			case 6:
 				{
-				const LAINT Data[] = {2,   5, 6,  1, 2, 3, 4, 5, 8,   1, 1,  7};
+				const LAINT_VECTOR Data = {2,   5, 6,  1, 2, 3, 4, 5, 8,   1, 1,  7};
 				SegData = Data;
 				}
 				break;
 			case 7:
 				{
-				const LAINT Data[] = {1,   5, 7,  1, 2, 3, 4, 5, 6, 8};
+				const LAINT_VECTOR Data = {1,   5, 7,  1, 2, 3, 4, 5, 6, 8};
 				SegData = Data;
 				}
 				break;
 			case 8:
 				{
-				const LAINT Data[] = {1,   1, 7,  1, 2, 3, 4, 5, 6, 7};
+				const LAINT_VECTOR Data = {1,   1, 7,  1, 2, 3, 4, 5, 6, 7};
 				SegData = Data;
 				}
 				break;
@@ -511,25 +518,25 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   3, 3,  4, 3, 2};
+				const LAINT_VECTOR Data = {1,   3, 3,  4, 3, 2};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 1,  1,   1, 2,  3, 4};
+				const LAINT_VECTOR Data = {2,   1, 1,  1,   1, 2,  3, 4};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {2,   1, 2,  1, 2,   1, 1,  4};
+				const LAINT_VECTOR Data = {2,   1, 2,  1, 2,   1, 1,  4};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {1,   2, 3,  1, 2, 3};
+				const LAINT_VECTOR Data = {1,   2, 3,  1, 2, 3};
 				SegData = Data;
 				}
 				break;
@@ -545,13 +552,13 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   1, 1,  2};
+				const LAINT_VECTOR Data = {1,   1, 1,  2};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {1,   1, 1,  1};
+				const LAINT_VECTOR Data = {1,   1, 1,  1};
 				SegData = Data;
 				}
 				break;
@@ -569,13 +576,13 @@ static void SplitByDemotedRoot(vector<RDSegment> &RootSplit, RDSegment &RSMem, L
 	for (LAINT i=OldNRSCount; i<NewNRSCount; i++)
 	{
 		RDSegment &Seg = RootSplit[i];
-		for (vector<LAINT>::iterator SRIter = Seg.Roots.begin();
-			SRIter != Seg.Roots.end(); SRIter++)
-			*SRIter = RSMem.Roots[(*SRIter)-1];
+		for (auto &SRI: Seg.Roots)
+			SRI = RSMem.Roots[SRI-1];		
 	}
 }
 
-LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams, vector<LAINT> &RootNos)
+LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams,
+	const LAINT_VECTOR &RootNos)
 {
 	LABrancher Brancher;
 	Brancher.OrigAlg.Params = OrigAlgParams;
@@ -591,7 +598,7 @@ LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams, vector<LA
 		}
 	}
 	
-	vector<RDSegment> RootSplit, NewRootSplit;
+	std::vector<RDSegment> RootSplit, NewRootSplit;
 	
 	// Initially unsplit
 	RDSegment Initial;
@@ -602,17 +609,15 @@ LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams, vector<LA
 	RootSplit.push_back(Initial);
 	
 	// Split by each one separately -- easiest to implement
-	for (vector<LAINT>::iterator RNIter = RootNos.begin();
-		RNIter != RootNos.end(); RNIter++)
+	for (const auto &RN: RootNos)
 	{
 		NewRootSplit.clear();
-		for (vector<RDSegment>::iterator RSIter = RootSplit.begin();
-			RSIter != RootSplit.end(); RSIter++)
-			SplitByDemotedRoot(NewRootSplit, *RSIter, *RNIter);
+		for (const auto RSI: RootSplit)
+			SplitByDemotedRoot(NewRootSplit, RSI, RN);
 		RootSplit.swap(NewRootSplit);
 	}
 	
-	vector<LAINT> DummyCol;
+	LAINT_VECTOR DummyCol;
 	SegListToBrancher(Brancher, DummyCol, RootSplit);
 	Brancher.U1Indices = RootNos;
 	Brancher.Setup();
@@ -622,7 +627,7 @@ LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams, vector<LA
 
 LABrancher MakeRootDemoter(const LieAlgebraParams &OrigAlgParams, LAINT RootNo)
 {
-	vector<LAINT> RootNos;
+	LAINT_VECTOR RootNos;
 	RootNos.push_back(RootNo);
 	return MakeMultiRootDemoter(OrigAlgParams, RootNos);
 }
@@ -641,15 +646,15 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 	if (family == 4 && rank <= 3) return Brancher;
 	
 	// Indices are for 1 values; they are 1-based
-	vector<LAINT> Indices;
-	vector<BrSubMatEntry> SpecialRow;
+	LAINT_VECTOR Indices;
+	std::vector<BrSubMatEntry> SpecialRow;
 	
 	// The general case: starts off empty
-	vector<RDSegment> RootSplit;
+	std::vector<RDSegment> RootSplit;
 	// Numbering of roots is 1-based here
 	RDSegment Segment;
 	// For special-casing for the exceptional algebras
-	const LAINT *SegData = NULL;
+	LAINT_VECTOR SegData;
 	
 	switch(family)
 	{
@@ -765,37 +770,37 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   5, 6,  5, 4, 3, 6, -1, 2};
+				const LAINT_VECTOR Data = {1,   5, 6,  5, 4, 3, 6, -1, 2};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 1,  1,   1, 5,  5, 4, 3, 6, -1};
+				const LAINT_VECTOR Data = {2,   1, 1,  1,   1, 5,  5, 4, 3, 6, -1};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {3,   1, 2,  1, 2,   1, 2,  4, 5,   1, 2,  6, -1};
+				const LAINT_VECTOR Data = {3,   1, 2,  1, 2,   1, 2,  4, 5,   1, 2,  6, -1};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {2,   1, 5,  1, 2, 3, 6, -1,   1, 1,  5};
+				const LAINT_VECTOR Data = {2,   1, 5,  1, 2, 3, 6, -1,   1, 1,  5};
 				SegData = Data;
 				}
 				break;
 			case 5:
 				{
-				const LAINT Data[] = {1,   5, 6,  1, 2, 3, 6, -1, 4};
+				const LAINT_VECTOR Data = {1,   5, 6,  1, 2, 3, 6, -1, 4};
 				SegData = Data;
 				}
 				break;
 			case 6:
 				{
-				const LAINT Data[] = {2,   1, 5,  1, 2, 3, 4, 5,  1, 1,  -1};
+				const LAINT_VECTOR Data = {2,   1, 5,  1, 2, 3, 4, 5,  1, 1,  -1};
 				SegData = Data;
 				}
 				break;
@@ -806,43 +811,43 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 			{
 			case 1:
 				{
-				const LAINT Data[] = {2,   1, 1,  -1,   4, 6,  6, 5, 4, 3, 2, 7};
+				const LAINT_VECTOR Data = {2,   1, 1,  -1,   4, 6,  6, 5, 4, 3, 2, 7};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 2,  -1, 1,   1, 5,  6, 5, 4, 3, 7};
+				const LAINT_VECTOR Data = {2,   1, 2,  -1, 1,   1, 5,  6, 5, 4, 3, 7};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {3,   1, 3,  -1, 1, 2,   1, 3,  4, 5, 6,   1, 1,  7};
+				const LAINT_VECTOR Data = {3,   1, 3,  -1, 1, 2,   1, 3,  4, 5, 6,   1, 1,  7};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {2,   1, 5,  -1, 1, 2, 3, 7,   1, 2,  5, 6};
+				const LAINT_VECTOR Data = {2,   1, 5,  -1, 1, 2, 3, 7,   1, 2,  5, 6};
 				SegData = Data;
 				}
 				break;
 			case 5:
 				{
-				const LAINT Data[] = {2,   4, 6,  -1, 1, 2, 3, 4, 7,   1, 1,  6};
+				const LAINT_VECTOR Data = {2,   4, 6,  -1, 1, 2, 3, 4, 7,   1, 1,  6};
 				SegData = Data;
 				}
 				break;
 			case 6:
 				{
-				const LAINT Data[] = {1,   5, 7,  5, 4, 3, 2, 1, -1, 7};
+				const LAINT_VECTOR Data = {1,   5, 7,  5, 4, 3, 2, 1, -1, 7};
 				SegData = Data;
 				}
 				break;
 			case 7:
 				{
-				const LAINT Data[] = {1,   1, 7,  -1, 1, 2, 3, 4, 5, 6};
+				const LAINT_VECTOR Data = {1,   1, 7,  -1, 1, 2, 3, 4, 5, 6};
 				SegData = Data;
 				}
 				break;
@@ -853,49 +858,49 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 			{
 			case 1:
 				{
-				const LAINT Data[] = {1,   4, 8,  -1, 7, 6, 5, 4, 3, 2, 8};
+				const LAINT_VECTOR Data = {1,   4, 8,  -1, 7, 6, 5, 4, 3, 2, 8};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 1,  1,   1, 7,  -1, 7, 6, 5, 4, 3, 8};
+				const LAINT_VECTOR Data = {2,   1, 1,  1,   1, 7,  -1, 7, 6, 5, 4, 3, 8};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {3,   1, 2,  1, 2,   1, 5,  4, 5, 6, 7, -1,   1, 1,  8};
+				const LAINT_VECTOR Data = {3,   1, 2,  1, 2,   1, 5,  4, 5, 6, 7, -1,   1, 1,  8};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {2,   1, 4,  1, 2, 3, 8,   1, 4,  5, 6, 7, -1};
+				const LAINT_VECTOR Data = {2,   1, 4,  1, 2, 3, 8,   1, 4,  5, 6, 7, -1};
 				SegData = Data;
 				}
 				break;
 			case 5:
 				{
-				const LAINT Data[] = {2,   4, 5,  1, 2, 3, 4, 8,   1, 3,  6, 7, -1};
+				const LAINT_VECTOR Data = {2,   4, 5,  1, 2, 3, 4, 8,   1, 3,  6, 7, -1};
 				SegData = Data;
 				}
 				break;
 			case 6:
 				{
-				const LAINT Data[] = {2,   5, 6,  1, 2, 3, 4, 5, 8,   1, 2,  7, -1};
+				const LAINT_VECTOR Data = {2,   5, 6,  1, 2, 3, 4, 5, 8,   1, 2,  7, -1};
 				SegData = Data;
 				}
 				break;
 			case 7:
 				{
-				const LAINT Data[] = {2,   5, 7,  1, 2, 3, 4, 5, 6, 8,   1, 1,  -1};
+				const LAINT_VECTOR Data = {2,   5, 7,  1, 2, 3, 4, 5, 6, 8,   1, 1,  -1};
 				SegData = Data;
 				}
 				break;
 			case 8:
 				{
-				const LAINT Data[] = {1,   1, 8,  1, 2, 3, 4, 5, 6, 7, -1};
+				const LAINT_VECTOR Data = {1,   1, 8,  1, 2, 3, 4, 5, 6, 7, -1};
 				SegData = Data;
 				}
 				break;
@@ -911,25 +916,25 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 			{
 			case 1:
 				{
-				const LAINT Data[] = {2,   1, 1,  -1,   3, 3,  4, 3, 2};
+				const LAINT_VECTOR Data = {2,   1, 1,  -1,   3, 3,  4, 3, 2};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {2,   1, 2,  -1, 1,   1, 2,  3, 4};
+				const LAINT_VECTOR Data = {2,   1, 2,  -1, 1,   1, 2,  3, 4};
 				SegData = Data;
 				}
 				break;
 			case 3:
 				{
-				const LAINT Data[] = {2,   1, 3,  -1, 1, 2,   1, 1,  4};
+				const LAINT_VECTOR Data = {2,   1, 3,  -1, 1, 2,   1, 1,  4};
 				SegData = Data;
 				}
 				break;
 			case 4:
 				{
-				const LAINT Data[] = {1,   2, 4,  -1, 1, 2, 3};
+				const LAINT_VECTOR Data = {1,   2, 4,  -1, 1, 2, 3};
 				SegData = Data;
 				}
 				break;
@@ -945,13 +950,13 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 			{
 			case 1:
 				{
-				const LAINT Data[] = {2,   1, 1,  -1,   1, 1,  2};
+				const LAINT_VECTOR Data = {2,   1, 1,  -1,   1, 1,  2};
 				SegData = Data;
 				}
 				break;
 			case 2:
 				{
-				const LAINT Data[] = {1,   1, 2,  -1, 1};
+				const LAINT_VECTOR Data = {1,   1, 2,  -1, 1};
 				SegData = Data;
 				}
 				break;
@@ -966,18 +971,18 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 	LieAlgebra LA = GetLieAlgebra(OrigAlgParams);
 	
 	// Get the metric diagonal and its maximum
-	vector<LAINT> MetricDiag(rank);
+	LAINT_VECTOR MetricDiag(rank);
 	for (LAINT i=0; i<rank; i++)
 		MetricDiag[i] = LA.Metric(i,i);
 	LAINT MDMax = MetricDiag[0];
 	for (LAINT i=1; i<rank; i++)
-		MDMax = max(MDMax,MetricDiag[i]);
+		MDMax = std::max(MDMax,MetricDiag[i]);
 	
 	// The maximum positive root (assume sorted)
 	MatrixRow<LAINT> MaxPosRoot(LA.PosRoots, LA.PosRoots.get_rows()-1);
 	
 	// Assemble the special column vector
-	vector<LAINT> SpcCol(rank);
+	LAINT_VECTOR SpcCol(rank);
 	for (LAINT i=0; i<rank; i++)
 		SpcCol[i] = - (MaxPosRoot[i]*MetricDiag[i])/MDMax;
 	
@@ -999,14 +1004,13 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 // This document will thus have only some of the more interesting or easier-to-find ones
 
 // Reduces SU(n) to a product of SU(m)'s where n = product of m's.
-LABrancher SubalgMultSU(vector<LAINT> &SUOrds)
+LABrancher SubalgMultSU(const LAINT_VECTOR &SUOrds)
 {
 	LABrancher Brancher;
 	LAINT nso = SUOrds.size();
 	LAINT ntot = 1;
-	for (vector<LAINT>::iterator suoi = SUOrds.begin();
-		suoi != SUOrds.end(); suoi++)
-			ntot *= (*suoi);
+	for (auto suo: SUOrds)
+			ntot *= suo;
 	LAINT ntrnk = ntot - 1;
 	
 	Brancher.OrigAlg.Params.family = 1;
@@ -1060,14 +1064,13 @@ LABrancher SubalgMultSU(vector<LAINT> &SUOrds)
 // Positive n means SO(n) and negative n means Sp(-n).
 // SO(2) is handled as a U(1) factor.
 
-LABrancher SubalgMultSOSp(vector<LAINT> &SOSpOrds)
+LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 {
 	LABrancher Brancher;
 	LAINT nso = SOSpOrds.size();
 	LAINT soprod = 1;
-	for (vector<LAINT>::iterator sospoi = SOSpOrds.begin();
-		sospoi != SOSpOrds.end(); sospoi++)
-			soprod *= (*sospoi);
+	for (auto sospo: SOSpOrds)
+		soprod *= sospo;
 	
 	// Construct a projection matrix for roots onto vector rep. 
 	// Also get the type. Much like the previous function, 
@@ -1164,7 +1167,7 @@ LABrancher SubalgMultSOSp(vector<LAINT> &SOSpOrds)
 	
 	// Now the subalgebra matrices, with SO(2)/D(1) as a U(1) factor
 	Matrix<BrSubMatEntry> SMat0, SMat1;
-	vector<BrSubMatEntry> U1FacVec(ntrnk);
+	std::vector<BrSubMatEntry> U1FacVec(ntrnk);
 	Brancher.U1SrcVecStart();
 	for (LAINT kso=0; kso<nso; kso++)
 	{
@@ -1297,28 +1300,23 @@ LABrancher SubalgMultSOSp(vector<LAINT> &SOSpOrds)
 
 
 // In: length of root-vector lengths
-LABrancher SubalgMultAn(vector<LAINT> &ranks)
+LABrancher SubalgMultAn(LAINT_VECTOR &ranks)
 {
-	vector<LAINT> SUOrds;
-	for (vector<LAINT>::iterator rkiter = ranks.begin();
-		rkiter != ranks.end(); rkiter++)
-	{
-		LAINT &rank = *rkiter;
+	LAINT_VECTOR SUOrds;
+	for (auto rank: ranks)
 		SUOrds.push_back(rank+1);
-	}
+
 	return SubalgMultSU(SUOrds);
 }
 
 
 // In: list of algebra types as lists. For B(n),C(n),D(n): (2,n),(3,n),(4,n).
 // D(1) or (4,1) is legitimate.
-LABrancher SubalgMultBnCnDn(vector<LieAlgebraParams> &paramset)
+LABrancher SubalgMultBnCnDn(const std::vector<LieAlgebraParams> &paramset)
 {
-	vector<LAINT> SOSpOrds;
-	for (vector<LieAlgebraParams>::iterator psiter = paramset.begin();
-		psiter != paramset.end(); psiter++)
+	LAINT_VECTOR SOSpOrds;
+	for (const auto &Params: paramset)
 	{
-		LieAlgebraParams &Params = *psiter;
 		switch(Params.family)
 		{
 		case 2:
@@ -1568,7 +1566,7 @@ LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
 	size_t NumRepBlks = DestRepPtr->Degens.size();
 	
 	// Create sort indices
-	vector<LAINT> SortIxs(NumRepBlks);
+	LAINT_VECTOR SortIxs(NumRepBlks);
 	for (int k=0; k<NumRepBlks; k++)
 		SortIxs[k] = k;
 	
@@ -1601,8 +1599,8 @@ LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
 	{
 		for (LAINT k=0; k<ndst; k++)
 		{
-			Fraction<LAINT> *root1 = &RepXpnd(k,0);
-			Fraction<LAINT> *root2 = &RepXpnd(ndst-k-1,0);
+			LAINT_FRACTION *root1 = &RepXpnd(k,0);
+			LAINT_FRACTION *root2 = &RepXpnd(ndst-k-1,0);
 			for (LAINT m=0; m<DestRank; m++)
 				if (root1[m] != (- root2[m])) return Brancher;
 		}
@@ -1780,12 +1778,12 @@ LABrancher SubalgExtra(LAINT SAName)
 
 // Subalgebra #ix of brancher Brn0 gets branched by Brn1,
 // making a combined brancher.
-LABrancher ConcatBranchers(LABrancher &Brn0, LAINT ix, LABrancher &Brn1)
+LABrancher ConcatBranchers(const LABrancher &Brn0, LAINT ix, const LABrancher &Brn1)
 {
 	// Check
 	LABrancher Brancher;
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != Brn1.OrigAlg.Params.family) return Brancher;
 	if (Proj01.Params.rank != Brn1.OrigAlg.Params.rank) return Brancher;
 	
@@ -1796,13 +1794,11 @@ LABrancher ConcatBranchers(LABrancher &Brn0, LAINT ix, LABrancher &Brn1)
 	// Brn1 ones get run into the appropriate Brn0 one.
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix-1)
 		{
-			for (vector<LABrProjector>::iterator PrjIter = Brn1.Projectors.begin();
-				PrjIter != Brn1.Projectors.end(); PrjIter++)
+			for (auto &Proj1: Brn1.Projectors)
 			{
-				LABrProjector &Proj1 = *PrjIter;
 				LABrProjector Proj;
 				Proj.Params = Proj1.Params;
 				LAINT rows = Brn0.OrigAlg.Params.rank;
@@ -1826,16 +1822,14 @@ LABrancher ConcatBranchers(LABrancher &Brn0, LAINT ix, LABrancher &Brn1)
 	
 	LAINT rank0 = Brn0.OrigAlg.Params.rank;
 	LAINT rank1 = Brn1.OrigAlg.Params.rank;
-	vector<BrSubMatEntry> NewU1Vec(rank0);
-	vector<BrSubMatEntry> NewU1VecSrc(rank1);
+	std::vector<BrSubMatEntry> NewU1Vec(rank0);
+	std::vector<BrSubMatEntry> NewU1VecSrc(rank1);
 	
 	Brancher.U1SrcVecStart();
 	
-	for (vector<LAINT>::iterator U1IxIter = Brn1.U1Indices.begin();
-		U1IxIter != Brn1.U1Indices.end(); U1IxIter++)
+	for (auto uix: Brn1.U1Indices)
 	{
 		fill(NewU1VecSrc.begin(), NewU1VecSrc.end(), 0);
-		LAINT uix = *U1IxIter;
 		NewU1VecSrc[uix-1] = 1;
 		
 		mul_mv(NewU1Vec, Proj01.SubMatrix, NewU1VecSrc);
@@ -1844,7 +1838,7 @@ LABrancher ConcatBranchers(LABrancher &Brn0, LAINT ix, LABrancher &Brn1)
 	
 	for (LAINT i=0; i<Brn1.U1SrcVecs.get_rows(); i++)
 	{
-		MatrixRow<BrSubMatEntry> U1SV(Brn1.U1SrcVecs,i);
+		MatrixRow<BrSubMatEntry> U1SV((LAINT_FRACTION_MATRIX &)Brn1.U1SrcVecs,i);
 		copy(U1SV.begin(), U1SV.end(), NewU1VecSrc.begin());
 		
 		mul_mv(NewU1Vec, Proj01.SubMatrix, NewU1VecSrc);
@@ -1858,12 +1852,12 @@ LABrancher ConcatBranchers(LABrancher &Brn0, LAINT ix, LABrancher &Brn1)
 
 // Subalgebra #ix of brancher Brn0 gets a new family number
 // if it's A(1), B(1), or C(1): 1, 2, 3
-LABrancher BrancherRenameA1B1C1(LABrancher &Brn0, LAINT ix, LAINT newfam)
+LABrancher BrancherRenameA1B1C1(const LABrancher &Brn0, LAINT ix, LAINT newfam)
 {
 	LABrancher Brancher;
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	if (newfam < 1 || newfam > 3) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family < 1 || Proj01.Params.family > 3) return Brancher;
 	if (Proj01.Params.rank != 1) return Brancher;
 	
@@ -1875,7 +1869,7 @@ LABrancher BrancherRenameA1B1C1(LABrancher &Brn0, LAINT ix, LAINT newfam)
 	// Do the projection matrices
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix-1)
 		{
 			LABrProjector Proj = Proj0;
@@ -1894,11 +1888,11 @@ LABrancher BrancherRenameA1B1C1(LABrancher &Brn0, LAINT ix, LAINT newfam)
 
 
 // Subalgebra #ix of brancher Brn0 gets flipped between B(2) and C(2)
-LABrancher BrancherRenameB2C2(LABrancher &Brn0, LAINT ix)
+LABrancher BrancherRenameB2C2(const LABrancher &Brn0, LAINT ix)
 {
 	LABrancher Brancher;
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 2 && Proj01.Params.family != 3) return Brancher;
 	if (Proj01.Params.rank != 2) return Brancher;
 	
@@ -1910,13 +1904,13 @@ LABrancher BrancherRenameB2C2(LABrancher &Brn0, LAINT ix)
 	// Do the projection matrices
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix-1)
 		{
 			LABrProjector Proj = Proj0;
 			Proj.Params.family = 5 - Proj.Params.family;
 			for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
-				swap(Proj.SubMatrix(k,0), Proj.SubMatrix(k,1));
+				std::swap(Proj.SubMatrix(k,0), Proj.SubMatrix(k,1));
 			Brancher.Projectors.push_back(Proj);
 		}
 		else
@@ -1931,11 +1925,11 @@ LABrancher BrancherRenameB2C2(LABrancher &Brn0, LAINT ix)
 
 
 // Subalgebra #ix of brancher Brn0 gets flipped between A(3) and D(3)
-LABrancher BrancherRenameA3D3(LABrancher &Brn0, LAINT ix)
+LABrancher BrancherRenameA3D3(const LABrancher &Brn0, LAINT ix)
 {
 	LABrancher Brancher;
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 1 && Proj01.Params.family != 4) return Brancher;
 	if (Proj01.Params.rank != 3) return Brancher;
 	
@@ -1947,13 +1941,13 @@ LABrancher BrancherRenameA3D3(LABrancher &Brn0, LAINT ix)
 	// Do the projection matrices
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix-1)
 		{
 			LABrProjector Proj = Proj0;
 			Proj.Params.family = 5 - Proj.Params.family;
 			for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
-				swap(Proj.SubMatrix(k,0), Proj.SubMatrix(k,1));
+				std::swap(Proj.SubMatrix(k,0), Proj.SubMatrix(k,1));
 			Brancher.Projectors.push_back(Proj);
 		}
 		else
@@ -1968,11 +1962,11 @@ LABrancher BrancherRenameA3D3(LABrancher &Brn0, LAINT ix)
 
 
 // Subalgebra #ix of brancher Brn0 gets split into two A(1)'s if it is D(2)
-LABrancher BrancherSplitD2(LABrancher &Brn0, LAINT ix)
+LABrancher BrancherSplitD2(const LABrancher &Brn0, LAINT ix)
 {
 	LABrancher Brancher;
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 4) return Brancher;
 	if (Proj01.Params.rank != 2) return Brancher;
 	
@@ -1984,7 +1978,7 @@ LABrancher BrancherSplitD2(LABrancher &Brn0, LAINT ix)
 	// Do the projection matrices
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix-1)
 		{
 			LABrProjector Proj1, Proj2;
@@ -2015,14 +2009,14 @@ LABrancher BrancherSplitD2(LABrancher &Brn0, LAINT ix)
 
 // Subalgebras #ix1 and #ix2 of brancher Brn0 get joined into D(2)
 // if they are A(1)/B(1)/C(1)'s.
-LABrancher BrancherJoin2A1(LABrancher &Brn0, LAINT ix1, LAINT ix2)
+LABrancher BrancherJoin2A1(const LABrancher &Brn0, LAINT ix1, LAINT ix2)
 {
 	LABrancher Brancher;
 	if (ix2 == ix1) return Brancher;
 	if (ix1 <= 0 || ix1 > Brn0.Projectors.size()) return Brancher;
 	if (ix2 <= 0 || ix2 > Brn0.Projectors.size()) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix1-1];
-	LABrProjector &Proj02 = Brn0.Projectors[ix2-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix1-1];
+	const LABrProjector &Proj02 = Brn0.Projectors[ix2-1];
 	if (Proj01.Params.rank != 1) return Brancher;
 	if (Proj02.Params.rank != 1) return Brancher;
 	
@@ -2038,7 +2032,7 @@ LABrancher BrancherJoin2A1(LABrancher &Brn0, LAINT ix1, LAINT ix2)
 	Proj1.SubMatrix.resize(Proj01.SubMatrix.get_rows(),2);
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix1-1)
 		{
 			for (LAINT k=0; k<Proj0.SubMatrix.get_rows(); k++)
@@ -2064,7 +2058,7 @@ LABrancher BrancherJoin2A1(LABrancher &Brn0, LAINT ix1, LAINT ix2)
 // Makes conjugates of subalgebras  of brancher Brn0 with indexes in cjixs
 // different for A(n), n>1, D(n), and E(6). Not a true conjugate for D(2n),
 // but exchanged anyway.
-LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs)
+LABrancher BrancherConjugate(const LABrancher &Brn0, const LAINT_VECTOR &cjixs)
 {
 	LABrancher Brancher;
 	
@@ -2076,10 +2070,9 @@ LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs)
 	// Do the projection matrices
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		
-		vector<LAINT>::iterator cxiter =
-			find(cjixs.begin(), cjixs.end(), i+1);
+		auto cxiter = find(cjixs.begin(), cjixs.end(), i+1);
 		if (cxiter != cjixs.end())
 		{
 			LABrProjector Proj = Proj0;
@@ -2093,7 +2086,7 @@ LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs)
 				for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
 				{
 					for (LAINT m=0; m<hfrnk; m++)
-						swap(Proj.SubMatrix(k,m),Proj.SubMatrix(k,rnk-m-1));
+						std::swap(Proj.SubMatrix(k,m),Proj.SubMatrix(k,rnk-m-1));
 				}
 			}
 			else if (Proj.Params.family == 4)
@@ -2102,7 +2095,7 @@ LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs)
 				LAINT rnk = Proj.Params.rank;
 				for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
 				{
-					swap(Proj.SubMatrix(k,rnk-2),Proj.SubMatrix(k,rnk-1));
+					std::swap(Proj.SubMatrix(k,rnk-2),Proj.SubMatrix(k,rnk-1));
 				}
 			}
 			else if (Proj.Params.family == 5 && Proj.Params.rank == 6)
@@ -2110,8 +2103,8 @@ LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs)
 				// E(6)
 				for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
 				{
-					swap(Proj.SubMatrix(k,0),Proj.SubMatrix(k,4));
-					swap(Proj.SubMatrix(k,1),Proj.SubMatrix(k,3));
+					std::swap(Proj.SubMatrix(k,0),Proj.SubMatrix(k,4));
+					std::swap(Proj.SubMatrix(k,1),Proj.SubMatrix(k,3));
 				}
 			}
 			
@@ -2131,11 +2124,11 @@ LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs)
 // Subalgebra #ix gets conjugated with newrts specifiying
 // the new roots' location if it is D(4).
 // newrts is 1-based with length 4 with the second being 2
-LABrancher BrancherConjgD4(LABrancher &Brn0, LAINT ix, vector<LAINT> &newrts)
+LABrancher BrancherConjgD4(const LABrancher &Brn0, LAINT ix, const LAINT_VECTOR &newrts)
 {
 	LABrancher Brancher;
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
-	LABrProjector &Proj01 = Brn0.Projectors[ix-1];
+	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 4) return Brancher;
 	if (Proj01.Params.rank != 4) return Brancher;
 	
@@ -2143,7 +2136,7 @@ LABrancher BrancherConjgD4(LABrancher &Brn0, LAINT ix, vector<LAINT> &newrts)
 	// with the second one being 2
 	if (newrts.size() != 4) return Brancher;
 	if (newrts[1] != 2) return Brancher;
-	vector<LAINT> nrsrt = newrts;
+	LAINT_VECTOR nrsrt = newrts;
 	sort(nrsrt.begin(),nrsrt.end());
 	for (LAINT i=0; i<4; i++)
 		if (nrsrt[i] != (i+1)) return Brancher;
@@ -2156,11 +2149,11 @@ LABrancher BrancherConjgD4(LABrancher &Brn0, LAINT ix, vector<LAINT> &newrts)
 	// Do the projection matrices
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[i];
+		const LABrProjector &Proj0 = Brn0.Projectors[i];
 		if (i == ix-1)
 		{
 			LABrProjector Proj = Proj0;
-			vector<BrSubMatEntry> MatRow(4);
+			std::vector<BrSubMatEntry> MatRow(4);
 			for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
 			{
 				for (LAINT m=0; m<4; m++)
@@ -2182,11 +2175,11 @@ LABrancher BrancherConjgD4(LABrancher &Brn0, LAINT ix, vector<LAINT> &newrts)
 
 
 // Puts the subalgebras of brancher Brn0 into the order specified in neword.
-LABrancher BrancherRearrange(LABrancher &Brn0, vector<LAINT> &neword)
+LABrancher BrancherRearrange(const LABrancher &Brn0, const LAINT_VECTOR &neword)
 {
 	LABrancher Brancher;
 	if (neword.size() != Brn0.Projectors.size()) return Brancher;
-	vector<LAINT> nwosrt = neword;
+	LAINT_VECTOR nwosrt = neword;
 	sort(nwosrt.begin(),nwosrt.end());
 	for (LAINT i=0; i<Brn0.Projectors.size(); i++)
 		if (nwosrt[i] != (i+1)) return Brancher;
@@ -2196,10 +2189,9 @@ LABrancher BrancherRearrange(LABrancher &Brn0, vector<LAINT> &neword)
 	Brancher.U1Indices = Brn0.U1Indices;
 	Brancher.U1SrcVecs = Brn0.U1SrcVecs;
 	
-	for (vector<LAINT>::iterator nwiter = neword.begin();
-		nwiter != neword.end(); nwiter++)
+	for (auto nwi: neword)
 	{
-		LABrProjector &Proj0 = Brn0.Projectors[(*nwiter)-1];
+		const LABrProjector &Proj0 = Brn0.Projectors[nwi-1];
 		Brancher.Projectors.push_back(Proj0);
 	}
 	
@@ -2230,6 +2222,3 @@ LABrancher SubalgSelf(const LieAlgebraParams &OrigAlgParams)
 	Brancher.Setup();
 	return Brancher;
 }
-
-
-

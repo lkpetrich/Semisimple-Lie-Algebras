@@ -17,12 +17,12 @@ static bool IsDomWt(LAINT *Wts, size_t n)
 
 
 void DoRepProduct(LieAlgRepBuilder &Bld, size_t TotRank,
-	LieAlgRep &Rep1, LieAlgRep &Rep2)
+	const LieAlgRep &Rep1, const LieAlgRep &Rep2)
 {
 	LAINT rank = Rep1.Roots.get_cols();
 	
 	Bld.set_vlen(rank);
-	vector<LAINT> Roots(rank), Weights(rank);
+	LAINT_VECTOR Roots(rank), Weights(rank);
 	
 	for (size_t i1=0; i1<Rep1.Degens.size(); i1++)
 		for (size_t i2=0; i2<Rep2.Degens.size(); i2++)
@@ -41,13 +41,13 @@ void DoRepProduct(LieAlgRepBuilder &Bld, size_t TotRank,
 struct IndexSetIterator
 {
 	size_t MaxIndex;
-	vector<size_t> Indices;
-	map<size_t,LAINT> IndexCount;
+	SIZE_T_VECTOR Indices;
+	std::map<size_t,LAINT> IndexCount;
 	
 	// Creates and sets it up for a run
 	// Could be broken up if necessary
 	IndexSetIterator(int Power): Indices(Power)
-		{fill(Indices.begin(), Indices.end(), 0); Count();}
+		{std::fill(Indices.begin(), Indices.end(), 0); Count();}
 	
 	// Go the the next index; return whether doing so was successful
 	// Failing to do so will end the run
@@ -77,11 +77,9 @@ bool IndexSetIterator::Next()
 void IndexSetIterator::Count()
 {
 	IndexCount.clear();
-	for (vector<size_t>::iterator IItr = Indices.begin();
-		IItr != Indices.end(); IItr++)
+	for (auto ix: Indices)
 	{
-		size_t &ix = *IItr;
-		map<size_t,LAINT>::iterator CItr = IndexCount.find(ix);
+		auto CItr = IndexCount.find(ix);
 		if (CItr == IndexCount.end())
 		{
 			IndexCount[ix] = 1;
@@ -94,15 +92,15 @@ void IndexSetIterator::Count()
 }
 
 void DoRepPwrSym(LieAlgRepBuilder &Bld, size_t TotRank,
-	LieAlgRep &Rep, LAINT Power, LAINT Symm)
+	const LieAlgRep &Rep, LAINT Power, LAINT Symm)
 {
 	LAINT rank = Rep.Roots.get_cols();
-	vector<LAINT> Roots(rank), Weights(rank);
+	LAINT_VECTOR Roots(rank), Weights(rank);
 	if (Power < 1)
 	{
 		// Zero: scalar rep
-		fill(Roots.begin(),Roots.end(),0);
-		fill(Weights.begin(),Weights.end(),0);
+		std::fill(Roots.begin(),Roots.end(),0);
+		std::fill(Weights.begin(),Weights.end(),0);
 		Bld.set_vlen(rank);
 		if (IsDomWt(&Weights[0],TotRank))
 			Bld.AddRootOrCount(1,Roots,Weights);
@@ -117,12 +115,11 @@ void DoRepPwrSym(LieAlgRepBuilder &Bld, size_t TotRank,
 	do
 	{
 		LAXINT Degen = 1;
-		for (map<size_t,LAINT>::iterator CItr = Iter.IndexCount.begin();
-			CItr != Iter.IndexCount.end(); CItr++)
+		for (const auto &CItr: Iter.IndexCount)
 		{
-			size_t ix = CItr->first;
+			size_t ix = CItr.first;
 			LAINT dgn = Rep.Degens[ix];
-			LAINT mult = CItr->second;
+			LAINT mult = CItr.second;
 			LAXINT IDgn = 1;
 			for (LAINT i=0; i<mult; i++)
 				IDgn = ((dgn+Symx*i)*IDgn)/(i+1);
@@ -130,13 +127,12 @@ void DoRepPwrSym(LieAlgRepBuilder &Bld, size_t TotRank,
 		}
 		
 		// Assemble the root and weight vectors
-		fill(Roots.begin(),Roots.end(),0);
-		fill(Weights.begin(),Weights.end(),0);
-		for (map<size_t,LAINT>::iterator CItr = Iter.IndexCount.begin();
-			CItr != Iter.IndexCount.end(); CItr++)
+		std::fill(Roots.begin(),Roots.end(),0);
+		std::fill(Weights.begin(),Weights.end(),0);
+		for (const auto &CItr: Iter.IndexCount)
 		{
-			size_t ix = CItr->first;
-			LAINT mult = CItr->second;
+			size_t ix = CItr.first;
+			LAINT mult = CItr.second;
 			muladdto_vsv(Roots,mult,&Rep.Roots(ix,0));
 			muladdto_vsv(Weights,mult,&Rep.Weights(ix,0));
 		}
@@ -158,23 +154,25 @@ struct YDE_Extended: public YoungDiagramEntry
 	LAINT MultNomFac;
 };
 
+using YDE_Extended_List = std::vector<YDE_Extended>;
+
 // Nesting matrix:
 // Row indexing: by starting YD
 // Column indexing: by concatenation of nested YD's
 
 struct NestingEntry
 {
-	vector<LAINT> SubYD_Indices;
-	vector<LAINT> SubYD_Lens;
+	LAINT_VECTOR SubYD_Indices;
+	LAINT_VECTOR SubYD_Lens;
 	LAINT MultNomFac;
 };
 
-typedef vector<NestingEntry> NestingList;
+using NestingList = std::vector<NestingEntry>;
 
 struct YoungDiagramTensorPower
 {
-	vector<YDE_Extended> YDList;
-	Matrix<LAINT> Kostka;
+	YDE_Extended_List YDList;
+	LAINT_MATRIX Kostka;
 	Matrix<NestingList> Nesting;
 	
 	// Starting from the YD's, calculate everything else
@@ -183,7 +181,7 @@ struct YoungDiagramTensorPower
 	void FillOut();
 };
 
-typedef vector<YoungDiagramTensorPower> YoungDiagramTensorPowerList;
+using YoungDiagramTensorPowerList = std::vector<YoungDiagramTensorPower>;
 
 static YoungDiagramTensorPowerList TPList;
 
@@ -194,9 +192,9 @@ struct YDIndex
 	LAINT Power, Index;
 };
 
-static map<YoungDiagram,YDIndex> YDIndices;
+static std::map<YoungDiagram,YDIndex> YDIndices;
 
-static void YDTensAddVector(vector<YoungDiagram> &NewYDs, YoungDiagram &YD)
+static void YDTensAddVector(std::vector<YoungDiagram> &NewYDs, const YoungDiagram &YD)
 {
 	NewYDs.clear();
 	YoungDiagram NewYD(YD.size());
@@ -218,25 +216,21 @@ static void YDTensAddVector(vector<YoungDiagram> &NewYDs, YoungDiagram &YD)
 	}
 	
 	// Bottom one:
-	copy(YD.begin(),YD.end(),NewYD.begin());
+	std::copy(YD.begin(),YD.end(),NewYD.begin());
 	NewYD.push_back(1);
 	NewYDs.push_back(NewYD);
 }
 
-void YDTensSetAddVector(vector<YDE_Extended> &NewYDList, vector<YDE_Extended> &YDList)
+void YDTensSetAddVector(YDE_Extended_List &NewYDList, const YDE_Extended_List &YDList)
 {
-	vector<YoungDiagram> NewYDs;
+	std::vector<YoungDiagram> NewYDs;
 	NewYDList.clear();
-	for (vector<YDE_Extended>::iterator YDEIter = YDList.begin();
-		YDEIter != YDList.end(); YDEIter++)
+	for (const auto &YDEX: YDList)
 	{
-		YDE_Extended &YDEX = *YDEIter;
 		YDTensAddVector(NewYDs,YDEX.YD);
-		for (vector<YoungDiagram>::iterator NewYDIter = NewYDs.begin();
-			NewYDIter != NewYDs.end(); NewYDIter++)
+		for (const auto &YD: NewYDs)
 		{
-			YoungDiagram &YD = *NewYDIter;
-			map<YoungDiagram,YDIndex>::iterator YDIFind = YDIndices.find(YD);
+			auto YDIFind = YDIndices.find(YD);
 			if (YDIFind == YDIndices.end())
 			{
 				// Add the diagram to the indexer
@@ -259,7 +253,7 @@ void YDTensSetAddVector(vector<YDE_Extended> &NewYDList, vector<YDE_Extended> &Y
 	}
 }
 
-typedef long long FACTORIAL_TYPE;
+using FACTORIAL_TYPE = long long;
 
 static FACTORIAL_TYPE Factorial(LAINT n)
 {
@@ -269,14 +263,13 @@ static FACTORIAL_TYPE Factorial(LAINT n)
 	return fac;
 }
 
-static LAINT MultNomFactorial(YoungDiagram &YD)
+static LAINT MultNomFactorial(const YoungDiagram &YD)
 {
-	map<LAINT,LAINT> LenCounts;
+	std::map<LAINT,LAINT> LenCounts;
 	LAINT TotLen = 0;
-	for (YoungDiagram::iterator Iter = YD.begin(); Iter != YD.end(); Iter++)
+	for (const auto Row: YD)
 	{
-		LAINT Row = *Iter;
-		map<LAINT,LAINT>::iterator LCFind = LenCounts.find(Row);
+		auto LCFind = LenCounts.find(Row);
 		if (LCFind == LenCounts.end())
 		{
 			// Start
@@ -291,21 +284,20 @@ static LAINT MultNomFactorial(YoungDiagram &YD)
 	}
 	FACTORIAL_TYPE MNFNum = Factorial(TotLen);
 	FACTORIAL_TYPE MNFDen = 1;
-	for (map<LAINT,LAINT>::iterator LCIter = LenCounts.begin();
-		LCIter != LenCounts.end(); LCIter++)
+	for (const auto &LCIter: LenCounts)
 	{
-		LAINT NumRow = LCIter->second;
+		LAINT NumRow = LCIter.second;
 		MNFDen *= Factorial(NumRow);
 	}
 	return LAINT(MNFNum/MNFDen);
 }
 
-static void KostkaMatrix(Matrix<LAINT> &Kostka, vector<YDE_Extended> &YDList)
+static void KostkaMatrix(LAINT_MATRIX &Kostka, std::vector<YDE_Extended> &YDList)
 {
 	size_t NumYDs = YDList.size();
 	Matrix<LAXINT> LookBack(NumYDs);
 	LookBack.fill(0);
-	vector<LAXINT> DenFac(NumYDs);
+	std::vector<LAXINT> DenFac(NumYDs);
 	YoungDiagram LBYD;
 	
 	for (size_t i=0; i<NumYDs; i++)
@@ -358,19 +350,19 @@ static void KostkaMatrix(Matrix<LAINT> &Kostka, vector<YDE_Extended> &YDList)
 // Get whichever list of YD's will be necessary
 // Assumes that all the lists before the recently-calculated one
 // are present in TPList
-static vector<YDE_Extended> &NestingGetYDList(LAINT Power,
-	vector<YDE_Extended> &YDList)
+static std::vector<YDE_Extended> &NestingGetYDList(LAINT Power,
+	std::vector<YDE_Extended> &YDList)
 {
 	if (Power > TPList.size()) return YDList;
 	else return TPList[Power-1].YDList;
 }
 
-static void NestingMatrix(Matrix< vector<NestingEntry> > &Nesting,
-	vector<YDE_Extended> &YDList)
+static void NestingMatrix(Matrix< std::vector<NestingEntry> > &Nesting,
+	std::vector<YDE_Extended> &YDList)
 {
 	size_t NumYDs = YDList.size();
 	Nesting.resize(NumYDs);
-	vector<LAINT> SubdgrmIndices, NewSDI;
+	LAINT_VECTOR SubdgrmIndices, NewSDI;
 	YoungDiagram ConcatSubdgrms;
 	for (size_t i=0; i<NumYDs; i++)
 	{
@@ -411,9 +403,9 @@ static void NestingMatrix(Matrix< vector<NestingEntry> > &Nesting,
 			ConcatSubdgrms.clear();
 			for (LAINT ir=0; ir<YDLen; ir++)
 			{
-				vector<YDE_Extended> &SubYDList = NestingGetYDList(YD[ir],YDList);
+				std::vector<YDE_Extended> &SubYDList = NestingGetYDList(YD[ir],YDList);
 				YDE_Extended &SubYDEntry = SubYDList[NE.SubYD_Indices[ir]];
-				for (YoungDiagram::iterator YDIter = SubYDEntry.YD.begin();
+				for (auto YDIter = SubYDEntry.YD.begin();
 					YDIter != SubYDEntry.YD.end(); YDIter++)
 					ConcatSubdgrms.push_back(*YDIter);
 				NE.SubYD_Lens.push_back(SubYDEntry.YDLen);
@@ -431,12 +423,11 @@ static void NestingMatrix(Matrix< vector<NestingEntry> > &Nesting,
 
 void YoungDiagramTensorPower::FillOut()
 {
-	for (vector<YDE_Extended>::iterator YDIter = YDList.begin();
-		YDIter != YDList.end(); YDIter++)
+	for (auto &YDX: YDList)
 	{
-		YoungDiagram &YD = YDIter->YD;
-		YDIter->YDLen = YD.size();
-		YDIter->MultNomFac = MultNomFactorial(YD);
+		auto &YD = YDX.YD;
+		YDX.YDLen = YD.size();
+		YDX.MultNomFac = MultNomFactorial(YD);
 	}
 	
 	KostkaMatrix(Kostka,YDList);
@@ -500,15 +491,15 @@ bool IndexMultLessThan(const IndexMult &IM1, const IndexMult &IM2)
 
 
 void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
-	LieAlgRep &Rep, LAINT Power)
+	const LieAlgRep &Rep, LAINT Power)
 {
 	LAINT rank = Rep.Roots.get_cols();
-	vector<LAINT> Roots(rank), Weights(rank);
+	LAINT_VECTOR Roots(rank), Weights(rank);
 	if (Power < 1)
 	{
 		// Zero: scalar rep
-		fill(Roots.begin(),Roots.end(),0);
-		fill(Weights.begin(),Weights.end(),0);
+		std::fill(Roots.begin(),Roots.end(),0);
+		std::fill(Weights.begin(),Weights.end(),0);
 		BldList.resize(1);
 		BldList[0].Bld.set_vlen(rank);
 		if (IsDomWt(&Weights[0],TotRank))
@@ -517,7 +508,7 @@ void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
 	}
 	
 	YoungDiagramTensorPower &TPEntry = GetTensorPower(Power);
-	vector<YDE_Extended> &YDList = TPEntry.YDList;
+	std::vector<YDE_Extended> &YDList = TPEntry.YDList;
 	LAINT NumYDs = YDList.size();
 	BldList.resize(NumYDs);
 	for (LAINT i=0; i<NumYDs; i++)
@@ -530,12 +521,12 @@ void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
 	
 	// Index multiplicities -> Young diagrams
 	// Also get degens for indices in the YD order
-	vector<IndexMult> IndexMultList;
+	std::vector<IndexMult> IndexMultList;
 	YoungDiagram MultYD;
-	vector<LAINT> RepIxDegens;
+	LAINT_VECTOR RepIxDegens;
 	// Intermediates: orbit and rep multiplicities
 	// Orbit directly from nesting, rep from orbit and Kostka matrix
-	vector<LAXINT> OrbDegens(NumYDs), RepPwrDegens(NumYDs);
+	std::vector<LAXINT> OrbDegens(NumYDs), RepPwrDegens(NumYDs);
 	
 	IndexSetIterator Iter(Power);
 	Iter.MaxIndex = Rep.Degens.size();
@@ -546,11 +537,10 @@ void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
 		// when getting those multiplicities into YD order
 		// Get the rep degens with those indices
 		IndexMultList.clear();
-		for (map<size_t,LAINT>::iterator CItr = Iter.IndexCount.begin();
-			CItr != Iter.IndexCount.end(); CItr++)
+		for (const auto CItr: Iter.IndexCount)
 		{
-			size_t ix = CItr->first;
-			LAINT mult = CItr->second;
+			size_t ix = CItr.first;
+			LAINT mult = CItr.second;
 			IndexMult IM;
 			IM.Index = ix;
 			IM.Mult = mult;
@@ -559,11 +549,10 @@ void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
 		sort(IndexMultList.begin(),IndexMultList.end(),IndexMultLessThan);
 		MultYD.clear();
 		RepIxDegens.clear();
-		for (vector<IndexMult>::iterator IMLIter = IndexMultList.begin();
-			IMLIter != IndexMultList.end(); IMLIter++)
+		for (const auto &IMLIter: IndexMultList)
 		{
-			MultYD.push_back(IMLIter->Mult);
-			RepIxDegens.push_back(Rep.Degens[IMLIter->Index]);
+			MultYD.push_back(IMLIter.Mult);
+			RepIxDegens.push_back(Rep.Degens[IMLIter.Index]);
 		}
 		YDIndex &YDIX = YDIndices[MultYD];
 		LAINT MultIndex = YDIX.Index;
@@ -574,10 +563,8 @@ void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
 		{
 			NestingList &NList = NestingRow[i];
 			LAXINT DegenSum = 0;
-			for (NestingList::iterator NLIter = NList.begin();
-				NLIter != NList.end(); NLIter++)
+			for (const auto &NE: NList)
 			{
-				NestingEntry &NE = *NLIter;
 				LAINT DegenIndSum = NE.MultNomFac;
 				for (LAINT j=0; j<NE.SubYD_Lens.size(); j++)
 				{
@@ -595,9 +582,9 @@ void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
 		mul_mv(RepPwrDegens,TPEntry.Kostka,OrbDegens);
 		
 		// Assemble the root and weight vectors
-		fill(Roots.begin(),Roots.end(),0);
-		fill(Weights.begin(),Weights.end(),0);
-		for (map<size_t,LAINT>::iterator CItr = Iter.IndexCount.begin();
+		std::fill(Roots.begin(),Roots.end(),0);
+		std::fill(Weights.begin(),Weights.end(),0);
+		for (auto CItr = Iter.IndexCount.begin();
 			CItr != Iter.IndexCount.end(); CItr++)
 		{
 			size_t ix = CItr->first;

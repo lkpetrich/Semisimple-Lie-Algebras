@@ -5,7 +5,7 @@
 	Reference-counting smart pointer
 */
 
-template<class P> class RefCounter
+template<typename P> class RefCounter
 {
 	// Uses pointers to both the object and the count,
 	// so that the count can be passed around alongside the object

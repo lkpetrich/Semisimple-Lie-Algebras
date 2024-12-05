@@ -9,7 +9,7 @@
 
 // Branching-rule object
 
-typedef Fraction<LAINT> BrSubMatEntry;
+using BrSubMatEntry = LAINT_FRACTION;
 
 struct LABrProjector
 {
@@ -35,11 +35,11 @@ struct LABrancher
 	LAProdRepHandler ResAlg; // The result algebra -- a product one
 	
 	// Number can vary
-	vector<LABrProjector> Projectors;
+	std::vector<LABrProjector> Projectors;
 	// The U(1) factors, specified in two different ways
 	// This one is for root demotion
 	// As in the Mathematica and Python versions, 1-based and not 0-based
-	vector<LAINT> U1Indices;
+	LAINT_VECTOR U1Indices;
 	// This one is for interpreting SO(2) as U(1)
 	// Like those two, (result) * (original)
 	// Uses fractions for full generality
@@ -50,51 +50,57 @@ struct LABrancher
 	
 	// Integerized forms, for convenience in calculating
 	Matrix<LAINT> U1SrcVecNums;
-	vector<LAINT> U1SrcVecDens;
+	LAINT_VECTOR U1SrcVecDens;
 	
 	void clear() {ResAlg.Params.ParamList.clear(); Projectors.clear();
 		U1Indices.clear(); U1SrcVecs.clear();}
 	void Setup(); // Does precalculation
 	
 	// Evaluates the branching
-	LACntdMaxWtList DoBranching(LieAlgRep &Rep);
-	LACntdMaxWtList DoBranching(const LAINT *MaxWts)
-		{LieAlgRepPtr RepPtr = OrigAlg.GetRepPtr(RO_REP,MaxWts); LieAlgRep &Rep = *RepPtr;
+	LACntdMaxWtList DoBranching(const LieAlgRep &Rep) const;
+	LACntdMaxWtList DoBranching(const LAINT *MaxWts) const
+		{const LieAlgRepPtr RepPtr = OrigAlg.GetRepPtr(RO_REP,MaxWts);
+			const LieAlgRep &Rep = *RepPtr;
 			return DoBranching(Rep);}
-	LACntdMaxWtList DoBranching(vector<LAINT> &MaxWts)
-		{LieAlgRepPtr RepPtr = OrigAlg.RepHandlerBase::GetRepPtr(RO_REP,MaxWts); LieAlgRep &Rep = *RepPtr;
+	LACntdMaxWtList DoBranching(const LAINT_VECTOR &MaxWts) const
+		{const LieAlgRepPtr RepPtr = OrigAlg.RepHandlerBase::GetRepPtr(RO_REP,MaxWts);
+			const LieAlgRep &Rep = *RepPtr;
 			return DoBranching(Rep);}
-	LACntdMaxWtList DoBranching(LACntdMaxWtList &CWL)
-		{LieAlgRepPtr RepPtr = OrigAlg.RepHandlerBase::GetRepPtr(RO_REP,CWL); LieAlgRep &Rep = *RepPtr;
+	LACntdMaxWtList DoBranching(const LACntdMaxWtList &CWL) const
+		{const LieAlgRepPtr RepPtr = OrigAlg.RepHandlerBase::GetRepPtr(RO_REP,CWL);
+			const LieAlgRep &Rep = *RepPtr;
 			return DoBranching(Rep);}
 };
 
 // The branchers
 
 // Turns root RootNo (1-based) into a U(1) factor
-LABrancher MakeRootDemoter(const LieAlgebraParams &OrigAlgParams, LAINT RootNo);
+LABrancher MakeRootDemoter(const LieAlgebraParams &OrigAlgParams,
+	LAINT RootNo);
 
 // Turns roots RootNos (1-based) into U(1) factors
-LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams, vector<LAINT> &RootNos);
+LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams,
+	const LAINT_VECTOR &RootNos);
 
 // Extends the algebra with a root then removes root RootNo (1-based)
 // Does not exist for A(n), B1, C1, D2, or D3
-LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT RootNo);
+LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams,
+	LAINT RootNo);
 
 // Decomposes SU(n1*n2*...) into SU(n1)*SU(n2)*...
 // Fundamental rep is outer product of fundamental reps
-LABrancher SubalgMultSU(vector<LAINT> &SUOrds);
+LABrancher SubalgMultSU(const LAINT_VECTOR &SUOrds);
 
 // Decomposes SO/Sp(n1*n2*...) into SO/Sp(n1)*SO/Sp(n2)*...
 // Positive n makes SO, negative n Sp
 // Vector rep is outer product of vector reps
-LABrancher SubalgMultSOSp(vector<LAINT> &SOSpOrds);
+LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds);
 
 // An version of multiplied-n SU(n)
-LABrancher SubalgMultAn(vector<LAINT> &ranks);
+LABrancher SubalgMultAn(const LAINT_VECTOR &ranks);
 
 // BnCnDn version of multiplied-n SO/Sp(n)
-LABrancher SubalgMultBnCnDn(vector<LieAlgebraParams> &paramset);
+LABrancher SubalgMultBnCnDn(const std::vector<LieAlgebraParams> &paramset);
 
 // SO(even) into one or two SO(odd)'s.
 // It does SO(2*rank) -> SO(2*sbrk+1) * SO(2*rank-2*sbrk-1)
@@ -121,7 +127,8 @@ LABrancher SubalgHeightA1(const LieAlgebraParams &OrigAlgParams);
 // It goes from an algebra of family f to one with type dsttype,
 // with the source algebra's fundamental or vector rep
 // being mapped onto the destination algebra's irrep with highest weights dstwts.
-LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
+LABrancher SubalgVector(LAINT family,
+	const LieAlgebraParams &DestAlgParams,
 	const LAINT *DestMaxWeights);
 
 // Extra subalgebras, for the exceptional algebras individually
@@ -155,7 +162,7 @@ enum {
 };
 
 // Call with one of the enums above
-LABrancher SubalgExtra(LAINT SAName);
+LABrancher SubalgExtra(const LAINT SAName);
 
 
 // These all return a brancher object from their input brancher objects
@@ -164,37 +171,38 @@ LABrancher SubalgExtra(LAINT SAName);
 
 // Subalgebra #ix of brancher Brn0 gets branched by Brn1,
 // making a combined brancher.
-LABrancher ConcatBranchers(LABrancher &Brn0, LAINT ix, LABrancher &Brn1);
+LABrancher ConcatBranchers(const LABrancher &Brn0,
+	LAINT ix, const LABrancher &Brn1);
 
 // Subalgebra #ix of brancher Brn0 gets a new family number
 // if it's A(1), B(1), or C(1): 1, 2, 3
-LABrancher BrancherRenameA1B1C1(LABrancher &Brn0, LAINT ix, LAINT newfam);
+LABrancher BrancherRenameA1B1C1(const LABrancher &Brn0, LAINT ix, LAINT newfam);
 
 // Subalgebra #ix of brancher Brn0 gets flipped between B(2) and C(2)
-LABrancher BrancherRenameB2C2(LABrancher &Brn0, LAINT ix);
+LABrancher BrancherRenameB2C2(const LABrancher &Brn0, LAINT ix);
 
 // Subalgebra #ix of brancher Brn0 gets flipped between A(3) and D(3)
-LABrancher BrancherRenameA3D3(LABrancher &Brn0, LAINT ix);
+LABrancher BrancherRenameA3D3(const LABrancher &Brn0, LAINT ix);
 
 // Subalgebra #ix of brancher Brn0 gets split into two A(1)'s if it is D(2)
-LABrancher BrancherSplitD2(LABrancher &Brn0, LAINT ix);
+LABrancher BrancherSplitD2(const LABrancher &Brn0, LAINT ix);
 
 // Subalgebras #ix1 and #ix2 of brancher Brn0 get joined into D(2)
 // if they are A(1)/B(1)/C(1)'s.
-LABrancher BrancherJoin2A1(LABrancher &Brn0, LAINT ix1, LAINT ix2);
+LABrancher BrancherJoin2A1(const LABrancher &Brn0, LAINT ix1, LAINT ix2);
 
 // Makes conjugates of subalgebras  of brancher Brn0 with indexes in cjixs;
 // different for A(n), n>1, D(n), and E(6). Not a true conjugate for D(2n),
 // but exchanged anyway.
-LABrancher BrancherConjugate(LABrancher &Brn0, vector<LAINT> &cjixs);
+LABrancher BrancherConjugate(const LABrancher &Brn0, const LAINT_VECTOR &cjixs);
 
 // Subalgebra #ix gets conjugated with newrts specifiying
 // the new roots' location if it is D(4).
 // newrts is 1-based with length 4 with the second being 2
-LABrancher BrancherConjgD4(LABrancher &Brn0, LAINT ix, vector<LAINT> &newrts);
+LABrancher BrancherConjgD4(const LABrancher &Brn0, LAINT ix, const LAINT_VECTOR &newrts);
 
 // Puts the subalgebras of brancher Brn0 into the order specified in neword.
-LABrancher BrancherRearrange(LABrancher &Brn0, vector<LAINT> &neword);
+LABrancher BrancherRearrange(const LABrancher &Brn0, const LAINT_VECTOR &neword);
 
 // Returns branching to the original algebra
 LABrancher SubalgSelf(const LieAlgebraParams &OrigAlgParams);

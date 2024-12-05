@@ -10,7 +10,7 @@
 	Assignment (=) makes a new copy, not varying with the old one.
 */
 
-template<class N> class Fraction
+template<typename N> class Fraction
 {
 private:
 	N num, den;
@@ -18,8 +18,8 @@ private:
 	
 public:
 	// Accessors
-	N get_num() {return num;}
-	N get_den() {return den;}
+	N get_num() const {return num;}
+	N get_den() const {return den;}
 	
 	// Constructors
 	Fraction(); // Zero
@@ -28,17 +28,17 @@ public:
 	Fraction(const Fraction<N> &frac);
 	
 	// Assignment
-	template<class NI> Fraction<N> &operator = (const Fraction<NI> &val);
+	template<typename NI> Fraction<N> &operator = (const Fraction<NI> &val);
 	Fraction<N> &set(const N &num_ = N(0), const N &den_ = N(1));
 	
 	// Arithmetic
 	Fraction<N> &operator + ();
 	Fraction<N> operator - ();
 	
-	template<class NX> friend Fraction<NX> operator + (const Fraction<NX> &a, const Fraction<NX> &b);
-	template<class NX> friend Fraction<NX> operator - (const Fraction<NX> &a, const Fraction<NX> &b);
-	template<class NX> friend Fraction<NX> operator * (const Fraction<NX> &a, const Fraction<NX> &b);
-	template<class NX> friend Fraction<NX> operator / (const Fraction<NX> &a, const Fraction<NX> &b);
+	template<typename NX> friend Fraction<NX> operator + (const Fraction<NX> &a, const Fraction<NX> &b);
+	template<typename NX> friend Fraction<NX> operator - (const Fraction<NX> &a, const Fraction<NX> &b);
+	template<typename NX> friend Fraction<NX> operator * (const Fraction<NX> &a, const Fraction<NX> &b);
+	template<typename NX> friend Fraction<NX> operator / (const Fraction<NX> &a, const Fraction<NX> &b);
 	
 	Fraction<N> &operator += (const Fraction<N> &a);
 	Fraction<N> &operator -= (const Fraction<N> &a);
@@ -57,7 +57,7 @@ public:
 
 // Greatest common denominator, using Euclid's algorithm
 // Returns a nonnegative result even if one or both inputs are negative
-template<class N> N GCD(const N &a, const N &b)
+template<typename N> N GCD(const N &a, const N &b)
 {
 	// Avoid dividing by zero
 	if (a == N(0)) return N(1);
@@ -82,7 +82,7 @@ template<class N> N GCD(const N &a, const N &b)
 
 // Least common multiple
 // Also nonnegative even if one or both inputs are negative
-template<class N> N LCM(const N &a, const N &b)
+template<typename N> N LCM(const N &a, const N &b)
 {
 	N res = (a/GCD(a,b))*b;
 	if (res < N(0)) res = - res;
@@ -90,14 +90,14 @@ template<class N> N LCM(const N &a, const N &b)
 }
 
 // Absolute value
-template<class N> N abs(const N &a)
+template<typename N> N abs(const N &a)
 {
 	return Fraction<N>(abs(a.get_num()),a.get_den());
 }
 
 // Reduces a fraction to lowest terms,
 // makes the denominator nonnegative
-template<class N> void Fraction<N>::Normalize()
+template<typename N> void Fraction<N>::Normalize()
 {
 	// Handle the special cases with zeros first
 	if (num == N(0) && den == N(0)) {}
@@ -115,35 +115,35 @@ template<class N> void Fraction<N>::Normalize()
 
 // Constructors
 
-template<class N> Fraction<N>::Fraction():
+template<typename N> Fraction<N>::Fraction():
 	num(0), den(1) {}
 
-template<class N> Fraction<N>::Fraction(const N &num_):
+template<typename N> Fraction<N>::Fraction(const N &num_):
 	num(num_), den(1) {}
 
-template<class N> Fraction<N>::Fraction(const N &num_, const N &den_):
+template<typename N> Fraction<N>::Fraction(const N &num_, const N &den_):
 	num(num_), den(den_) {Normalize();}
 
-template<class N> Fraction<N>::Fraction(const Fraction<N> &frac):
+template<typename N> Fraction<N>::Fraction(const Fraction<N> &frac):
 	num(frac.num), den(frac.den) {}
 
 // Assignment
 
-template<class N> template<class NI> Fraction<N> &Fraction<N>::operator = (const Fraction<NI> &val)
+template<typename N> template<typename NI> Fraction<N> &Fraction<N>::operator = (const Fraction<NI> &val)
 	{num = val.num; den = val.den; return *this;}
 
-template<class N> Fraction<N> &Fraction<N>::set(const N &num_, const N &den_)
+template<typename N> Fraction<N> &Fraction<N>::set(const N &num_, const N &den_)
 	{num = num_; den = den_; Normalize(); return *this;}
 
 // Arithmetic
 
-template<class N> Fraction<N> &Fraction<N>::operator + ()
+template<typename N> Fraction<N> &Fraction<N>::operator + ()
 	{return *this;}
 
-template<class N> Fraction<N> Fraction<N>::operator - ()
+template<typename N> Fraction<N> Fraction<N>::operator - ()
 	{Fraction<N> res(-num,den); return res;}
 
-template<class N> Fraction<N> operator + (const Fraction<N> &a, const Fraction<N> &b)
+template<typename N> Fraction<N> operator + (const Fraction<N> &a, const Fraction<N> &b)
 {
 	N div = GCD(a.den,b.den);
 	N num = a.num*(b.den/div) + b.num*(a.den/div);
@@ -152,7 +152,7 @@ template<class N> Fraction<N> operator + (const Fraction<N> &a, const Fraction<N
 	return res;
 }
 
-template<class N> Fraction<N> operator - (const Fraction<N> &a, const Fraction<N> &b)
+template<typename N> Fraction<N> operator - (const Fraction<N> &a, const Fraction<N> &b)
 {
 	N div = GCD(a.den,b.den);
 	N num = a.num*(b.den/div) - b.num*(a.den/div);
@@ -161,7 +161,7 @@ template<class N> Fraction<N> operator - (const Fraction<N> &a, const Fraction<N
 	return res;
 }
 
-template<class N> Fraction<N> operator * (const Fraction<N> &a, const Fraction<N> &b)
+template<typename N> Fraction<N> operator * (const Fraction<N> &a, const Fraction<N> &b)
 {
 	N div1 = GCD(a.num,b.den);
 	N div2 = GCD(a.den,b.num);
@@ -171,7 +171,7 @@ template<class N> Fraction<N> operator * (const Fraction<N> &a, const Fraction<N
 	return res;
 }
 
-template<class N> Fraction<N> operator / (const Fraction<N> &a, const Fraction<N> &b)
+template<typename N> Fraction<N> operator / (const Fraction<N> &a, const Fraction<N> &b)
 {
 	N div1 = GCD(a.num,b.num);
 	N div2 = GCD(a.den,b.den);
@@ -181,7 +181,7 @@ template<class N> Fraction<N> operator / (const Fraction<N> &a, const Fraction<N
 	return res;
 }
 
-template<class N> Fraction<N> &Fraction<N>::operator += (const Fraction<N> &a)
+template<typename N> Fraction<N> &Fraction<N>::operator += (const Fraction<N> &a)
 {
 	N div = GCD(den,a.den);
 	num = num*(a.den/div) + a.num*(den/div);
@@ -190,7 +190,7 @@ template<class N> Fraction<N> &Fraction<N>::operator += (const Fraction<N> &a)
 	return *this;
 }
 
-template<class N> Fraction<N> &Fraction<N>::operator -= (const Fraction<N> &a)
+template<typename N> Fraction<N> &Fraction<N>::operator -= (const Fraction<N> &a)
 {
 	N div = GCD(den,a.den);
 	num = num*(a.den/div) - a.num*(den/div);
@@ -199,7 +199,7 @@ template<class N> Fraction<N> &Fraction<N>::operator -= (const Fraction<N> &a)
 	return *this;
 }
 
-template<class N> Fraction<N> &Fraction<N>::operator *= (const Fraction<N> &a)
+template<typename N> Fraction<N> &Fraction<N>::operator *= (const Fraction<N> &a)
 {
 	N div1 = GCD(num,a.den);
 	N div2 = GCD(den,a.num);
@@ -209,7 +209,7 @@ template<class N> Fraction<N> &Fraction<N>::operator *= (const Fraction<N> &a)
 	return *this;
 }
 
-template<class N> Fraction<N> &Fraction<N>::operator /= (const Fraction<N> &a)
+template<typename N> Fraction<N> &Fraction<N>::operator /= (const Fraction<N> &a)
 {
 	N div1 = GCD(num,a.num);
 	N div2 = GCD(den,a.den);
@@ -221,37 +221,37 @@ template<class N> Fraction<N> &Fraction<N>::operator /= (const Fraction<N> &a)
 
 // Comparison
 
-template<class N> bool operator == (const Fraction<N> &a, const Fraction <N> &b)
+template<typename N> bool operator == (const Fraction<N> &a, const Fraction <N> &b)
 {
 	N div = GCD(a.den,b.den);
 	return a.num*(b.den/div) == b.num*(a.den/div);
 }
 
-template<class N> bool operator != (const Fraction<N> &a, const Fraction <N> &b)
+template<typename N> bool operator != (const Fraction<N> &a, const Fraction <N> &b)
 {
 	N div = GCD(a.den,b.den);
 	return a.num*(b.den/div) != b.num*(a.den/div);
 }
 
-template<class N> bool operator > (const Fraction<N> &a, const Fraction <N> &b)
+template<typename N> bool operator > (const Fraction<N> &a, const Fraction <N> &b)
 {
 	N div = GCD(a.den,b.den);
 	return a.num*(b.den/div) > b.num*(a.den/div);
 }
 
-template<class N> bool operator < (const Fraction<N> &a, const Fraction <N> &b)
+template<typename N> bool operator < (const Fraction<N> &a, const Fraction <N> &b)
 {
 	N div = GCD(a.den,b.den);
 	return a.num*(b.den/div) < b.num*(a.den/div);
 }
 
-template<class N> bool operator >= (const Fraction<N> &a, const Fraction <N> &b)
+template<typename N> bool operator >= (const Fraction<N> &a, const Fraction <N> &b)
 {
 	N div = GCD(a.den,b.den);
 	return a.num*(b.den/div) >= b.num*(a.den/div);
 }
 
-template<class N> bool operator <= (const Fraction<N> &a, const Fraction <N> &b)
+template<typename N> bool operator <= (const Fraction<N> &a, const Fraction <N> &b)
 {
 	N div = GCD(a.den,b.den);
 	return a.num*(b.den/div) <= b.num*(a.den/div);

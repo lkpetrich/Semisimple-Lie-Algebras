@@ -167,7 +167,7 @@ bool LieAlgebra::MakeDynkin()
 // Set up the metric and the Cartan matrix
 
 // Returns whether the matrix is nonsingular
-template<class N> bool SetupMatrices(Matrix<N> &Mat,
+template<typename N> bool SetupMatrices(const Matrix<N> &Mat,
 	Matrix< Fraction<N> > &InvMat,
 	Matrix<N> &InvMatNum,
 	N &InvMatDen)
@@ -254,11 +254,11 @@ void LieAlgebra::MakePosRoots()
 	// Using LAINT instead of bool because in the STL,
 	// bool gets turned into packed bits,
 	// something that you can't use pointers or refs on
-	Matrix<LAINT> WhichWay(rank,rank);
+	LAINT_MATRIX WhichWay(rank,rank);
 	WhichWay.fill(true);
 	
-	vector<LAINT> NewRoot(rank), NewWeight(rank), NwRtRed(rank);
-	vector<LAINT> NewWW(rank);
+	LAINT_VECTOR NewRoot(rank), NewWeight(rank), NwRtRed(rank);
+	LAINT_VECTOR NewWW(rank);
 	
 	for (int i=0; i<rank; i++)
 		Indexer.AppendVector(&PosRoots(i,0));
@@ -323,7 +323,7 @@ void LieAlgebra::MakePosRoots()
 					if (!RootOK) continue;
 					
 					// Add the root if possible
-					pair<bool,size_t> ret = Indexer.AppendVector(NewRoot);
+					std::pair<bool,size_t> ret = Indexer.AppendVector(NewRoot);
 					if (ret.first)
 					{
 						// Don't add it, and mark off its direction
@@ -372,10 +372,10 @@ void LieAlgebra::Setup()
 
 
 // For fast sorting
-size_t LARootHashFunction::operator() (vector<LAINT> &vec)
+size_t LARootHashFunction::operator() (LAINT_VECTOR &vec)
 {
 	size_t hashcode = 0;
-	for (vector<LAINT>::iterator it = vec.begin(); it != vec.end(); it++)
+	for (LAINT_VECTOR::iterator it = vec.begin(); it != vec.end(); it++)
 		hashcode = 17*hashcode + (*it);
 	
 	return hashcode;
@@ -397,25 +397,25 @@ bool LieAlgebraLessThan::operator() (const LieAlgebraParams &L1, const LieAlgebr
 }
 
 
-static map<LieAlgebraParams, LieAlgebra, LieAlgebraLessThan> LieAlgebraCache;
+typedef std::map<LieAlgebraParams, LieAlgebra, LieAlgebraLessThan> LieAlgebraCacheType;
+static LieAlgebraCacheType LieAlgebraCache;
 static LieAlgebra InvalidLieAlgebra;
 
 
 LieAlgebra &GetLieAlgebra(const LieAlgebraParams &Params)
 {
-	map<LieAlgebraParams, LieAlgebra, LieAlgebraLessThan>::iterator it =
-		LieAlgebraCache.find(Params);
-	if (it == LieAlgebraCache.end())
+	auto iter = LieAlgebraCache.find(Params);
+	if (iter == LieAlgebraCache.end())
 	{
-		pair<LieAlgebraParams, LieAlgebra> rec;
+		std::pair<LieAlgebraParams, LieAlgebra> rec;
 		rec.first = Params;
 		if (!rec.second.UseParams(Params)) return InvalidLieAlgebra;
-		pair<map<LieAlgebraParams, LieAlgebra, LieAlgebraLessThan>::iterator, bool> ret =
+		std::pair<LieAlgebraCacheType::iterator, bool> ret =
 			LieAlgebraCache.insert(rec);
 		return ret.first->second;
 	}
 	else
-		return it->second;
+		return iter->second;
 }
 
 LieAlgebra &GetLieAlgebra(LAINT family, LAINT rank)

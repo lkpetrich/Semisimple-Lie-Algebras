@@ -5,7 +5,6 @@
 */
 
 #include <vector>
-using namespace std;
 
 #include "Fraction.h"
 #include "LinearAlgebra.h"
@@ -21,10 +20,16 @@ using namespace std;
 
 
 // Integer type used for all persistent data
-typedef int LAINT;
+using LAINT = int;
+using LAINT_VECTOR = std::vector<LAINT>;
+using LAINT_MATRIX = Matrix<LAINT>;
+using LAINT_MATRIX_ROW = MatrixRow<LAINT>;
+using LAINT_MATRIX_ROW_CONST = ConstMatrixRow<LAINT>;
+using LAINT_FRACTION = Fraction<LAINT>;
+using LAINT_FRACTION_MATRIX = Matrix<LAINT_FRACTION>;
 
 // Intermediate-result integer type, for avoiding overflows
-typedef int LAXINT;
+using LAXINT = int;
 
 
 struct RootConnectionType
@@ -34,8 +39,8 @@ struct RootConnectionType
 
 struct DynkinDiagramType
 {
-	vector<LAINT> rtlens; // Root lengths
-	vector<RootConnectionType> rtconns; // Root connections
+	LAINT_VECTOR rtlens; // Root lengths
+	std::vector<RootConnectionType> rtconns; // Root connections
 };
 
 
@@ -73,19 +78,19 @@ public:
 	// with their inverses and their inverses integerized form.
 	// Multiply by the LCM of the denominators to produce
 	// an integer-numerator matrix ("num") and an integer denominator ("den").
-	Matrix<LAINT> Metric;
-	Matrix< Fraction<LAINT> > InverseMetric;
-	Matrix<LAINT> InvMetNum;
+	LAINT_MATRIX Metric;
+	LAINT_FRACTION_MATRIX InverseMetric;
+	LAINT_MATRIX InvMetNum;
 	LAINT InvMetDen;
-	Matrix<LAINT> Cartan;
-	Matrix< Fraction<LAINT> > InverseCartan;
-	Matrix<LAINT> InvCtnNum;
+	LAINT_MATRIX Cartan;
+	LAINT_FRACTION_MATRIX InverseCartan;
+	LAINT_MATRIX InvCtnNum;
 	LAINT InvCtnDen;
 	
 	// Positive roots and weights
 	// and their sums
-	Matrix<LAINT> PosRoots, PosWeights;
-	vector<LAINT> PosRootSum, PosWeightSum;
+	LAINT_MATRIX PosRoots, PosWeights;
+	LAINT_VECTOR PosRootSum, PosWeightSum;
 	
 	// Call this function to do all the setup
 	void Setup();
@@ -98,7 +103,7 @@ public:
 		{family = Params.family; rank = Params.rank; Setup();}
 	
 	// More with parameter object
-	LieAlgebraParams GetParams()
+	LieAlgebraParams GetParams() const
 		{LieAlgebraParams Params = *this; return Params;}
 	// returns whether the new algebra is valid
 	bool UseParams(const LieAlgebraParams &Params)
@@ -109,7 +114,7 @@ public:
 // For fast sorting
 struct LARootHashFunction
 {
-	size_t operator() (vector<LAINT> &vec);
+	size_t operator() (LAINT_VECTOR &vec);
 };
 
 // For caching the algebras

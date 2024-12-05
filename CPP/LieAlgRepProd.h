@@ -10,13 +10,13 @@
 // Product of two reps
 
 void DoRepProduct(LieAlgRepBuilder &Bld, size_t TotRank,
-	LieAlgRep &Rep1, LieAlgRep &Rep2);
+	const LieAlgRep &Rep1, const LieAlgRep &Rep2);
 
-template<class WTVEC1, class WTVEC2>
-LACntdMaxWtList DecomposeRepProduct(RepHandlerBase &Hdlr, WTVEC1 &Wt1, WTVEC2 &Wt2)
+template<typename WTVEC1, typename WTVEC2>
+LACntdMaxWtList DecomposeRepProduct(const RepHandlerBase &Hdlr, const WTVEC1 &Wt1, const WTVEC2 &Wt2)
 {
-	LieAlgRepPtr RepPtr1 = Hdlr.GetRepPtr(RO_REP,Wt1);
-	LieAlgRepPtr RepPtr2 = Hdlr.GetRepPtr(RO_REP,Wt2);
+	const LieAlgRepPtr RepPtr1 = Hdlr.GetRepPtr(RO_REP,Wt1);
+	const LieAlgRepPtr RepPtr2 = Hdlr.GetRepPtr(RO_REP,Wt2);
 	LieAlgRepBuilder Bld;
 	DoRepProduct(Bld, Hdlr.get_rank(), *RepPtr1, *RepPtr2);
 	return Hdlr.ExtractWts(RO_REP_ORBIT,Bld);
@@ -26,7 +26,7 @@ LACntdMaxWtList DecomposeRepProduct(RepHandlerBase &Hdlr, WTVEC1 &Wt1, WTVEC2 &W
 
 // Contains the diagram in form (row lengths from max to min, no zero ones)
 // and the multiplicity associated with it
-typedef vector<LAINT> YoungDiagram;
+using YoungDiagram = LAINT_VECTOR;
 
 struct YoungDiagramEntry
 {
@@ -40,7 +40,7 @@ struct LAYDRepBldEntry
 	YoungDiagramEntry YDE;
 };
 
-typedef vector<LAYDRepBldEntry> LAYDRepBldList;
+using LAYDRepBldList = std::vector<LAYDRepBldEntry>;
 
 struct LAYDCWLEntry
 {
@@ -48,15 +48,15 @@ struct LAYDCWLEntry
 	YoungDiagramEntry YDE;
 };
 
-typedef vector<LAYDCWLEntry> LAYDCWLList;
+using LAYDCWLList = std::vector<LAYDCWLEntry>;
 
 void DoRepPower(LAYDRepBldList &BldList, size_t TotRank,
-	LieAlgRep &Rep, LAINT Power);
+	const LieAlgRep &Rep, LAINT Power);
 
 template <class WTVEC>
-LAYDCWLList DecomposeRepPower(RepHandlerBase &Hdlr, WTVEC &Wt, LAINT Power)
+LAYDCWLList DecomposeRepPower(const RepHandlerBase &Hdlr, const WTVEC &Wt, LAINT Power)
 {
-	LieAlgRepPtr RepPtr = Hdlr.GetRepPtr(RO_REP,Wt);
+	const LieAlgRepPtr RepPtr = Hdlr.GetRepPtr(RO_REP,Wt);
 	LAYDRepBldList BldList;
 	DoRepPower(BldList, Hdlr.get_rank(), *RepPtr, Power);
 	
@@ -75,12 +75,12 @@ LAYDCWLList DecomposeRepPower(RepHandlerBase &Hdlr, WTVEC &Wt, LAINT Power)
 // Symm is the symmetry type: +1: symmetric, -1: antisymmetric
 
 void DoRepPwrSym(LieAlgRepBuilder &Bld, size_t TotRank,
-	LieAlgRep &Rep, LAINT Power, LAINT Symm);
+	const LieAlgRep &Rep, LAINT Power, LAINT Symm);
 
 template <class WTVEC>
-LACntdMaxWtList DecomposeRepPwrSym(RepHandlerBase &Hdlr, WTVEC &Wt, LAINT Power, LAINT Symm)
+LACntdMaxWtList DecomposeRepPwrSym(const RepHandlerBase &Hdlr, const WTVEC &Wt, LAINT Power, LAINT Symm)
 {
-	LieAlgRepPtr RepPtr = Hdlr.GetRepPtr(RO_REP,Wt);
+	const LieAlgRepPtr RepPtr = Hdlr.GetRepPtr(RO_REP,Wt);
 	LieAlgRepBuilder Bld;
 	DoRepPwrSym(Bld, Hdlr.get_rank(), *RepPtr, Power, Symm);
 	return Hdlr.ExtractWts(RO_REP_ORBIT,Bld);
