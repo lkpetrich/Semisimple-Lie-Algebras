@@ -15,14 +15,14 @@ void LABrProjector::Setup()
 	for (ir=0; ir<nr; ir++)
 		for (ic=0; ic<nc; ic++)
 		{
-			BrSubMatEntry &val = SubMatrix(ir,ic);
+			const BRSUBMAT_ENTRY &val = SubMatrix(ir,ic);
 			lcmden = LCM(lcmden,val.get_den());
 		}
 	SubMatDen = lcmden;
 	for (ir=0; ir<nr; ir++)
 		for (ic=0; ic<nc; ic++)
 		{
-			BrSubMatEntry &val = SubMatrix(ir,ic);
+			const BRSUBMAT_ENTRY &val = SubMatrix(ir,ic);
 			SubMatNum(ir,ic) = val.get_num()*(lcmden/val.get_den());
 		}
 }
@@ -47,20 +47,48 @@ void LABrancher::Setup()
 	U1SrcVecDens.resize(nr);
 	for (ir=0; ir<nr; ir++)
 	{
-		MatrixRow<BrSubMatEntry> U1SrcVecRow(U1SrcVecs,ir);
-		MatrixRow<LAINT> U1SrcVecNumRow(U1SrcVecNums,ir);
+		BRSUBMAT_MATRIX_ROW_CONST U1SrcVecRow(U1SrcVecs, ir);
+		LAINT_MATRIX_ROW U1SrcVecNumRow(U1SrcVecNums, ir);
 		LAINT lcmden = 1;
 		for (ic=0; ic<nc; ic++)
 		{
-			BrSubMatEntry &val = U1SrcVecRow[ic];
+			const BRSUBMAT_ENTRY &val = U1SrcVecRow[ic];
 			lcmden = LCM(lcmden,val.get_den());
 		}
 		U1SrcVecDens[ir] = lcmden;
 		for (ic=0; ic<nc; ic++)
 		{
-			BrSubMatEntry &val = U1SrcVecRow[ic];
+			const BRSUBMAT_ENTRY &val = U1SrcVecRow[ic];
 			U1SrcVecNumRow[ic] = val.get_num()*(lcmden/val.get_den());
 		}
+	}
+}
+
+
+// Note: the U(1) indices are 1-based while C++ indexing is 0-based
+void LABrancher::ExpandU1s(BRSUBMAT_MATRIX &XpndU1s) const
+{
+	// Will be using AppendVector(),
+	// so be sure that there's nothing in the output matrix
+	auto n = OrigAlg.Params.rank;
+	XpndU1s.resize(0, n);
+	BRSUBMAT_VECTOR XpndU1Vec(n);
+	
+	for (auto uix: U1Indices)
+	{
+		for (int j=0; j<n; j++)
+			XpndU1Vec[j] = ((j+1) == uix) ? 1 : 0;
+		
+		XpndU1s.AppendVector(XpndU1Vec);
+	}
+	
+	for (int i=0; i<U1SrcVecs.get_rows(); i++)
+	{
+		BRSUBMAT_MATRIX_ROW_CONST XpndU1Row(U1SrcVecs, i);
+		
+		std::copy(XpndU1Row.begin(), XpndU1Row.end(), XpndU1Vec.begin());
+		
+		XpndU1s.AppendVector(XpndU1Vec);
 	}
 }
 
@@ -158,7 +186,7 @@ static void WtSpcSubMat(LAINT_MATRIX &SubMat, LAINT n,
 }
 
 // Weight space to root space
-static void SubMatWtToRoot(Matrix<BrSubMatEntry>& DestSubMat,
+static void SubMatWtToRoot(BRSUBMAT_MATRIX& DestSubMat,
 	const LieAlgebraParams &OrigParams,
 	const LieAlgebraParams &SubParams,
 	const LAINT_MATRIX &OrigSubMat)
@@ -168,7 +196,7 @@ static void SubMatWtToRoot(Matrix<BrSubMatEntry>& DestSubMat,
 	size_t nr = OrigSubMat.get_rows();
 	size_t nc = OrigSubMat.get_cols();
 	
-	Matrix<BrSubMatEntry> IntmdSubMat(nr,nc);
+	BRSUBMAT_MATRIX IntmdSubMat(nr,nc);
 	mul_mm(IntmdSubMat, OrigLA.Cartan, OrigSubMat);
 	
 	DestSubMat.resize(nr,nc);
@@ -227,6 +255,29 @@ static void UnpackRDSegmentData(std::vector<RDSegment> &RootSplit,
 	}
 }
 
+
+// Returns branching to the original algebra
+LABrancher SubalgSelf(const LieAlgebraParams &OrigAlgParams)
+{
+	LABrancher Brancher;
+
+	Brancher.OrigAlg.Params = OrigAlgParams;
+	
+	LABrProjector Proj;
+	Proj.Params = OrigAlgParams;
+	
+	// The projection matrix is the identity matrix here
+	LAINT rank = OrigAlgParams.rank;
+	Proj.SubMatrix.resize(rank);
+	Proj.SubMatrix.fill(0);
+	for (LAINT k=0; k<rank; k++)
+		Proj.SubMatrix(k,k) = 1;
+	
+	Brancher.Projectors.push_back(Proj);
+	
+	Brancher.Setup();
+	return Brancher;
+}
 
 
 static void SplitByDemotedRoot(std::vector<RDSegment> &RootSplit,
@@ -584,6 +635,8 @@ static void SplitByDemotedRoot(std::vector<RDSegment> &RootSplit,
 LABrancher MakeMultiRootDemoter(const LieAlgebraParams &OrigAlgParams,
 	const LAINT_VECTOR &RootNos)
 {
+	if (RootNos.size() == 0) return SubalgSelf(OrigAlgParams);
+	
 	LABrancher Brancher;
 	Brancher.OrigAlg.Params = OrigAlgParams;
 	
@@ -647,7 +700,7 @@ LABrancher MakeExtensionSplitter(const LieAlgebraParams &OrigAlgParams, LAINT Ro
 	
 	// Indices are for 1 values; they are 1-based
 	LAINT_VECTOR Indices;
-	std::vector<BrSubMatEntry> SpecialRow;
+	BRSUBMAT_VECTOR SpecialRow;
 	
 	// The general case: starts off empty
 	std::vector<RDSegment> RootSplit;
@@ -1017,14 +1070,14 @@ LABrancher SubalgMultSU(const LAINT_VECTOR &SUOrds)
 	Brancher.OrigAlg.Params.rank = ntrnk;
 	
 	// Using fractions for generality
-	Matrix<BrSubMatEntry> VecProj(ntrnk,ntot);
+	BRSUBMAT_MATRIX VecProj(ntrnk,ntot);
 	VecProj.fill(0);
 	for (LAINT k=0; k<ntrnk; k++)
 	{
 		VecProj(k,k) = 1;
 		VecProj(k,k+1) = -1;
 	}
-	Matrix<BrSubMatEntry> SMat0, SMat1;
+	BRSUBMAT_MATRIX SMat0, SMat1;
 	for (LAINT kso=0; kso<nso; kso++)
 	{
 		LABrProjector Proj;
@@ -1077,7 +1130,7 @@ LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 	// it's designed to turn the vector rep
 	// into crossed diagonal lines of 1 and -1
 	LAINT ntot, ntrnk;
-	Matrix<BrSubMatEntry> vpbase, vecproj;
+	BRSUBMAT_MATRIX vpbase, vecproj;
 	if (soprod > 0)
 	{
 		if (soprod % 2 == 0)
@@ -1166,8 +1219,8 @@ LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 	}
 	
 	// Now the subalgebra matrices, with SO(2)/D(1) as a U(1) factor
-	Matrix<BrSubMatEntry> SMat0, SMat1;
-	std::vector<BrSubMatEntry> U1FacVec(ntrnk);
+	BRSUBMAT_MATRIX SMat0, SMat1;
+	BRSUBMAT_VECTOR U1FacVec(ntrnk);
 	Brancher.U1SrcVecStart();
 	for (LAINT kso=0; kso<nso; kso++)
 	{
@@ -1194,12 +1247,12 @@ LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 					LAINT ko = (k/sstr) % smsz;
 					for (LAINT ks=0; ks<smrnk; ks++)
 					{
-						if (ko == ks) SMat0(k,ks) = BrSubMatEntry(1,2);
-						if (ko == ks+1) SMat0(k,ks) = BrSubMatEntry(-1,2);
-						if ((ko == smrnk-2) && (ks == smrnk-1)) SMat0(k,ks) = BrSubMatEntry(1,2);
-						if (ko == (smsz-1) - ks) SMat0(k,ks) = BrSubMatEntry(-1,2);
-						if (ko == (smsz-1) - (ks+1)) SMat0(k,ks) = BrSubMatEntry(1,2);
-						if ((ko == smrnk+1) && (ks == smrnk-1)) SMat0(k,ks) = BrSubMatEntry(-1,2);						
+						if (ko == ks) SMat0(k,ks) = BRSUBMAT_ENTRY(1,2);
+						if (ko == ks+1) SMat0(k,ks) = BRSUBMAT_ENTRY(-1,2);
+						if ((ko == smrnk-2) && (ks == smrnk-1)) SMat0(k,ks) = BRSUBMAT_ENTRY(1,2);
+						if (ko == (smsz-1) - ks) SMat0(k,ks) = BRSUBMAT_ENTRY(-1,2);
+						if (ko == (smsz-1) - (ks+1)) SMat0(k,ks) = BRSUBMAT_ENTRY(1,2);
+						if ((ko == smrnk+1) && (ks == smrnk-1)) SMat0(k,ks) = BRSUBMAT_ENTRY(-1,2);						
 					}
 				}
 			}
@@ -1222,10 +1275,10 @@ LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 					LAINT ko = (k/sstr) % smsz;
 					for (LAINT ks=0; ks<smrnk; ks++)
 					{
-						if (ko == ks) SMat0(k,ks) = (ks == smrnk-1) ? 1 : BrSubMatEntry(1,2);
-						if (ko == ks+1) SMat0(k,ks) = BrSubMatEntry(-1,2);
-						if (ko == (smsz-1) - ks) SMat0(k,ks) = (ks == smrnk-1) ? -1 : BrSubMatEntry(-1,2);
-						if (ko == (smsz-1) - (ks+1)) SMat0(k,ks) = BrSubMatEntry(1,2);
+						if (ko == ks) SMat0(k,ks) = (ks == smrnk-1) ? 1 : BRSUBMAT_ENTRY(1,2);
+						if (ko == ks+1) SMat0(k,ks) = BRSUBMAT_ENTRY(-1,2);
+						if (ko == (smsz-1) - ks) SMat0(k,ks) = (ks == smrnk-1) ? -1 : BRSUBMAT_ENTRY(-1,2);
+						if (ko == (smsz-1) - (ks+1)) SMat0(k,ks) = BRSUBMAT_ENTRY(1,2);
 					}
 				}			
 			}
@@ -1251,10 +1304,10 @@ LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 					LAINT ko = (k/sstr) % smsz;
 					for (LAINT ks=0; ks<smrnk; ks++)
 					{
-						if (ko == ks) SMat0(k,ks) = BrSubMatEntry(1,2);
-						if (ko == ks+1) SMat0(k,ks) = BrSubMatEntry(-1,2);
-						if (ko == (smsz-1) - ks) SMat0(k,ks) = BrSubMatEntry(-1,2);
-						if (ko == (smsz-1) - (ks+1)) SMat0(k,ks) = BrSubMatEntry(1,2);
+						if (ko == ks) SMat0(k,ks) = BRSUBMAT_ENTRY(1,2);
+						if (ko == ks+1) SMat0(k,ks) = BRSUBMAT_ENTRY(-1,2);
+						if (ko == (smsz-1) - ks) SMat0(k,ks) = BRSUBMAT_ENTRY(-1,2);
+						if (ko == (smsz-1) - (ks+1)) SMat0(k,ks) = BRSUBMAT_ENTRY(1,2);
 					}
 				}			
 			}
@@ -1275,7 +1328,7 @@ LABrancher SubalgMultSOSp(const LAINT_VECTOR &SOSpOrds)
 		else if (Params.family == 4 && Params.rank == 1)
 		{
 			// Treat as a U(1) factor
-			mulby_sm(SMat1, BrSubMatEntry(1,2));
+			mulby_sm(SMat1, BRSUBMAT_ENTRY(1,2));
 			
 			for (LAINT k=0; k<ntrnk; k++)
 				U1FacVec[k] = SMat1(k,0);
@@ -1576,7 +1629,7 @@ LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
 	sort(SortIxs.begin(), SortIxs.end(), Sorter);
 	
 	LAINT RootDen = DestLA.InvCtnDen;
-	Matrix<BrSubMatEntry> RepXpnd(ndst,DestRank);
+	BRSUBMAT_MATRIX RepXpnd(ndst,DestRank);
 	LAINT ix = 0;
 	for (LAINT k=0; k<NumRepBlks; k++)
 	{
@@ -1587,7 +1640,7 @@ LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
 		{
 			for (LAINT m=0; m<DestRank; m++)
 			{
-				BrSubMatEntry deirt(root[m],RootDen);
+				const BRSUBMAT_ENTRY deirt(root[m],RootDen);
 				RepXpnd(ix,m) = deirt;
 			}
 			ix++;
@@ -1607,10 +1660,10 @@ LABrancher SubalgVector(LAINT family, const LieAlgebraParams &DestAlgParams,
 	}
 	
 	// The inverse of the source rep
-	BrSubMatEntry zero(0,1);
-	BrSubMatEntry one(1,1);
-	BrSubMatEntry half(1,2);
-	Matrix<BrSubMatEntry> SrcRepInv(n,ndst);
+	BRSUBMAT_ENTRY zero(0,1);
+	BRSUBMAT_ENTRY one(1,1);
+	BRSUBMAT_ENTRY half(1,2);
+	BRSUBMAT_MATRIX SrcRepInv(n,ndst);
 	SrcRepInv.fill(zero);
 	switch(family)
 	{
@@ -1780,8 +1833,9 @@ LABrancher SubalgExtra(LAINT SAName)
 // making a combined brancher.
 LABrancher ConcatBranchers(const LABrancher &Brn0, LAINT ix, const LABrancher &Brn1)
 {
-	// Check
 	LABrancher Brancher;
+	
+	// Check
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != Brn1.OrigAlg.Params.family) return Brancher;
@@ -1820,29 +1874,22 @@ LABrancher ConcatBranchers(const LABrancher &Brn0, LAINT ix, const LABrancher &B
 	Brancher.U1Indices = Brn0.U1Indices;
 	Brancher.U1SrcVecs = Brn0.U1SrcVecs;
 	
-	LAINT rank0 = Brn0.OrigAlg.Params.rank;
-	LAINT rank1 = Brn1.OrigAlg.Params.rank;
-	std::vector<BrSubMatEntry> NewU1Vec(rank0);
-	std::vector<BrSubMatEntry> NewU1VecSrc(rank1);
+	BRSUBMAT_MATRIX XpndU1s;
+	Brn1.ExpandU1s(XpndU1s);
+	
+	auto n0 = Brn1.OrigAlg.Params.rank;
+	BRSUBMAT_VECTOR NewXpndU1Vec0(n0);
+	
+	auto n1 = Brancher.OrigAlg.Params.rank;
+	BRSUBMAT_VECTOR NewXpndU1Vec1(n1);
 	
 	Brancher.U1SrcVecStart();
-	
-	for (auto uix: Brn1.U1Indices)
+	for (int i=0; i<XpndU1s.get_rows(); i++)
 	{
-		fill(NewU1VecSrc.begin(), NewU1VecSrc.end(), 0);
-		NewU1VecSrc[uix-1] = 1;
-		
-		mul_mv(NewU1Vec, Proj01.SubMatrix, NewU1VecSrc);
-		Brancher.U1SrcVecs.AppendVector(NewU1Vec);
-	}
-	
-	for (LAINT i=0; i<Brn1.U1SrcVecs.get_rows(); i++)
-	{
-		MatrixRow<BrSubMatEntry> U1SV((LAINT_FRACTION_MATRIX &)Brn1.U1SrcVecs,i);
-		copy(U1SV.begin(), U1SV.end(), NewU1VecSrc.begin());
-		
-		mul_mv(NewU1Vec, Proj01.SubMatrix, NewU1VecSrc);
-		Brancher.U1SrcVecs.AppendVector(NewU1Vec);
+		BRSUBMAT_MATRIX_ROW_CONST XpndU1Row(XpndU1s, i);
+		std::copy(XpndU1Row.begin(), XpndU1Row.end(), NewXpndU1Vec0.begin());
+		mul_mv(NewXpndU1Vec1, Proj01.SubMatrix, NewXpndU1Vec0);
+		Brancher.U1SrcVecs.AppendVector(NewXpndU1Vec1);
 	}
 	
 	Brancher.Setup();
@@ -1855,6 +1902,8 @@ LABrancher ConcatBranchers(const LABrancher &Brn0, LAINT ix, const LABrancher &B
 LABrancher BrancherRenameA1B1C1(const LABrancher &Brn0, LAINT ix, LAINT newfam)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	if (newfam < 1 || newfam > 3) return Brancher;
 	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
@@ -1891,6 +1940,8 @@ LABrancher BrancherRenameA1B1C1(const LABrancher &Brn0, LAINT ix, LAINT newfam)
 LABrancher BrancherRenameB2C2(const LABrancher &Brn0, LAINT ix)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 2 && Proj01.Params.family != 3) return Brancher;
@@ -1928,6 +1979,8 @@ LABrancher BrancherRenameB2C2(const LABrancher &Brn0, LAINT ix)
 LABrancher BrancherRenameA3D3(const LABrancher &Brn0, LAINT ix)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 1 && Proj01.Params.family != 4) return Brancher;
@@ -1965,6 +2018,8 @@ LABrancher BrancherRenameA3D3(const LABrancher &Brn0, LAINT ix)
 LABrancher BrancherSplitD2(const LABrancher &Brn0, LAINT ix)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 4) return Brancher;
@@ -2012,6 +2067,8 @@ LABrancher BrancherSplitD2(const LABrancher &Brn0, LAINT ix)
 LABrancher BrancherJoin2A1(const LABrancher &Brn0, LAINT ix1, LAINT ix2)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (ix2 == ix1) return Brancher;
 	if (ix1 <= 0 || ix1 > Brn0.Projectors.size()) return Brancher;
 	if (ix2 <= 0 || ix2 > Brn0.Projectors.size()) return Brancher;
@@ -2127,6 +2184,8 @@ LABrancher BrancherConjugate(const LABrancher &Brn0, const LAINT_VECTOR &cjixs)
 LABrancher BrancherConjgD4(const LABrancher &Brn0, LAINT ix, const LAINT_VECTOR &newrts)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (ix <= 0 || ix > Brn0.Projectors.size()) return Brancher;
 	const LABrProjector &Proj01 = Brn0.Projectors[ix-1];
 	if (Proj01.Params.family != 4) return Brancher;
@@ -2153,7 +2212,7 @@ LABrancher BrancherConjgD4(const LABrancher &Brn0, LAINT ix, const LAINT_VECTOR 
 		if (i == ix-1)
 		{
 			LABrProjector Proj = Proj0;
-			std::vector<BrSubMatEntry> MatRow(4);
+			BRSUBMAT_VECTOR MatRow(4);
 			for (LAINT k=0; k<Proj.SubMatrix.get_rows(); k++)
 			{
 				for (LAINT m=0; m<4; m++)
@@ -2178,6 +2237,8 @@ LABrancher BrancherConjgD4(const LABrancher &Brn0, LAINT ix, const LAINT_VECTOR 
 LABrancher BrancherRearrange(const LABrancher &Brn0, const LAINT_VECTOR &neword)
 {
 	LABrancher Brancher;
+	
+	// Check
 	if (neword.size() != Brn0.Projectors.size()) return Brancher;
 	LAINT_VECTOR nwosrt = neword;
 	sort(nwosrt.begin(),nwosrt.end());
@@ -2199,25 +2260,30 @@ LABrancher BrancherRearrange(const LABrancher &Brn0, const LAINT_VECTOR &neword)
 	return Brancher;
 }
 
-
-// Returns branching to the original algebra
-LABrancher SubalgSelf(const LieAlgebraParams &OrigAlgParams)
+// Mixes the U(1) factors of brancher Brn0, using matrix u1mix
+LABrancher BrancherRearrangeU1s(const LABrancher &Brn0, const BRSUBMAT_MATRIX &u1mix)
 {
 	LABrancher Brancher;
-
-	Brancher.OrigAlg.Params = OrigAlgParams;
 	
-	LABrProjector Proj;
-	Proj.Params = OrigAlgParams;
+	// Check
+	size_t TotalU1Size = Brn0.U1Indices.size() + Brn0.U1SrcVecs.get_rows();
+	if (u1mix.get_cols() != TotalU1Size) return Brancher;
 	
-	// The projection matrix is the identity matrix here
-	LAINT rank = OrigAlgParams.rank;
-	Proj.SubMatrix.resize(rank);
-	Proj.SubMatrix.fill(0);
-	for (LAINT k=0; k<rank; k++)
-		Proj.SubMatrix(k,k) = 1;
+	// Same starting algebra
+	Brancher.OrigAlg.Params = Brn0.OrigAlg.Params;
 	
-	Brancher.Projectors.push_back(Proj);
+	// Same projection matrices
+	Brancher.Projectors = Brn0.Projectors;
+	
+	// Do the U(1) factors
+	BRSUBMAT_MATRIX XpndU1s;
+	Brn0.ExpandU1s(XpndU1s);
+	
+	BRSUBMAT_MATRIX NewXpndU1s(u1mix.get_rows(), XpndU1s.get_cols());
+	mul_mm(NewXpndU1s, u1mix, XpndU1s);
+	
+	Brancher.U1Indices.clear();
+	Brancher.U1SrcVecs = NewXpndU1s;
 	
 	Brancher.Setup();
 	return Brancher;

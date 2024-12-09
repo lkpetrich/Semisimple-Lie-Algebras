@@ -9,7 +9,12 @@
 
 // Branching-rule object
 
-using BrSubMatEntry = LAINT_FRACTION;
+using BRSUBMAT_ENTRY = LAINT_FRACTION;
+using BRSUBMAT_VECTOR = std::vector<BRSUBMAT_ENTRY>;
+using BRSUBMAT_MATRIX = Matrix<BRSUBMAT_ENTRY>;
+using BRSUBMAT_MATRIX_ROW = MatrixRow<BRSUBMAT_ENTRY>;
+using BRSUBMAT_MATRIX_ROW_CONST = ConstMatrixRow<BRSUBMAT_ENTRY>;
+
 
 struct LABrProjector
 {
@@ -19,10 +24,10 @@ struct LABrProjector
 	// In the format of my Mathematica and Python versions:
 	// (original) * (result subalgebra)
 	// Uses fractions for full generality
-	Matrix<BrSubMatEntry> SubMatrix;
+	BRSUBMAT_MATRIX SubMatrix;
 	
 	// Integerized forms, for convenience in calculating
-	Matrix<LAINT> SubMatNum;
+	LAINT_MATRIX SubMatNum;
 	LAINT SubMatDen;
 	
 	void clear() {SubMatrix.clear(); SubMatNum.clear();}
@@ -43,13 +48,16 @@ struct LABrancher
 	// This one is for interpreting SO(2) as U(1)
 	// Like those two, (result) * (original)
 	// Uses fractions for full generality
-	Matrix<BrSubMatEntry> U1SrcVecs;
+	BRSUBMAT_MATRIX U1SrcVecs;
 	// Start using U1SrcVecs; no effect if already using it
 	void U1SrcVecStart()
 		{if (U1SrcVecs.get_rows() == 0) U1SrcVecs.resize(0,OrigAlg.Params.rank);}
 	
+	// Expand the U(1) factors and export
+	void ExpandU1s(BRSUBMAT_MATRIX &XpndU1s) const;
+		
 	// Integerized forms, for convenience in calculating
-	Matrix<LAINT> U1SrcVecNums;
+	LAINT_MATRIX U1SrcVecNums;
 	LAINT_VECTOR U1SrcVecDens;
 	
 	void clear() {ResAlg.Params.ParamList.clear(); Projectors.clear();
@@ -73,6 +81,9 @@ struct LABrancher
 };
 
 // The branchers
+
+// Returns branching to the original algebra
+LABrancher SubalgSelf(const LieAlgebraParams &OrigAlgParams);
 
 // Turns root RootNo (1-based) into a U(1) factor
 LABrancher MakeRootDemoter(const LieAlgebraParams &OrigAlgParams,
@@ -204,7 +215,7 @@ LABrancher BrancherConjgD4(const LABrancher &Brn0, LAINT ix, const LAINT_VECTOR 
 // Puts the subalgebras of brancher Brn0 into the order specified in neword.
 LABrancher BrancherRearrange(const LABrancher &Brn0, const LAINT_VECTOR &neword);
 
-// Returns branching to the original algebra
-LABrancher SubalgSelf(const LieAlgebraParams &OrigAlgParams);
+// Mixes the U(1) factors of brancher Brn0, using matrix u1mix
+LABrancher BrancherRearrangeU1s(const LABrancher &Brn0, const BRSUBMAT_MATRIX &u1mix);
 
 #endif

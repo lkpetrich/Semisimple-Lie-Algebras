@@ -61,7 +61,7 @@ void DumpBrancher(const LABrancher &Brancher)
 		{
 			for (ic=0; ic<nc; ic++)
 			{
-				const BrSubMatEntry &val = Proj.SubMatrix(ir, ic);
+				const BRSUBMAT_ENTRY &val = Proj.SubMatrix(ir, ic);
 				std::print("   {:3} {:3}", val.get_num(), val.get_den());
 			}
 			std::println("");
@@ -90,7 +90,7 @@ void DumpBrancher(const LABrancher &Brancher)
 	{
 		for (ic=0; ic<nc; ic++)
 		{
-			const BrSubMatEntry &val = Brancher.U1SrcVecs(ir, ic);
+			const BRSUBMAT_ENTRY &val = Brancher.U1SrcVecs(ir, ic);
 			std::print(" {}/{}", val.get_num(), val.get_den());
 		}
 		std::println("");
@@ -687,6 +687,8 @@ int main(int argc, char **argv)
 		{
 			std::println("SO(10) spinor breakdown"); println();
 			
+			std::println("Demote last root of SO(10)");
+			std::println("Makes SU(5) * U(1)");
 			const LAINT MaxWts[] = {0,0,0,1,0};
 			const LieAlgebraParams Params0 = {4,5};
 			const LABrancher Br0 = MakeRootDemoter(Params0,5);
@@ -694,6 +696,8 @@ int main(int argc, char **argv)
 			DumpCWL(CWL0);
 			println();
 			
+			std::println("Demote third root of SU(5) and concatenate");
+			std::println("Makes SU(3) * SU(2) * U(1) * U(1)");
 			const LieAlgebraParams Params1 = {1,4};
 			const LABrancher Br1 = MakeRootDemoter(Params1,3);
 			const LABrancher Br01 = ConcatBranchers(Br0,1, Br1);
@@ -701,24 +705,27 @@ int main(int argc, char **argv)
 			DumpCWL(CWL1);
 			println();
 			
-			LAINT_VECTOR mrts;
-			mrts.push_back(5);
-			mrts.push_back(3);
+			std::println("Demote third and last roots of SO(10)");
+			std::println("Makes SU(3) * SU(2) * U(1) * U(1)");
+			const LAINT_VECTOR mrts = {5,3};
 			const LABrancher Br2 = MakeMultiRootDemoter(Params0, mrts);
 			const LACntdMaxWtList CWL2 = Br2.DoBranching(MaxWts);
 			DumpCWL(CWL2);
 			println();
 			
+			std::println("2nd U(1)'s = {{{{1,0}}, {{6,1}}/5}} .1st U(1)'s");
+			println();
+			
+			std::println("Split of SO(10) into SO(6) * SO(4)");
 			const LABrancher Br3 = MakeExtensionSplitter(Params0,3);
 			const LACntdMaxWtList CWL3 = Br3.DoBranching(MaxWts);
 			DumpCWL(CWL3);
 			println();
 			
-			LAINT_VECTOR sos;
-			sos.push_back(2);
-			sos.push_back(2);
+			std::println("Split that SO(6) into SO(2) * SO(3)");
+			LAINT_VECTOR sos = {2,3};
 			const LABrancher Br31 = SubalgMultSOSp(sos);
-			const LABrancher Br311 = ConcatBranchers(Br3,2, Br31);
+			const LABrancher Br311 = ConcatBranchers(Br3,1, Br31);
 			const LACntdMaxWtList CWL31 = Br311.DoBranching(MaxWts);
 			DumpCWL(CWL31);
 			println();
@@ -726,25 +733,32 @@ int main(int argc, char **argv)
 		
 		{
 			std::println("A(1) - B(1) - C(1) relabeling"); println();
-			LAINT_VECTOR mrts;
-			mrts.push_back(-2);
-			mrts.push_back(-2);
+			std::println("SO(4) -> two of Sp(2)");
+			const LAINT_VECTOR mrts = {-2, -2};
 			const LABrancher Br0 = SubalgMultSOSp(mrts);
 			DumpBrancherSubalgebras(Br0);
+			std::println("First Sp(2) -> SU(2)");
 			const LABrancher Br1 = BrancherRenameA1B1C1(Br0,1,1);
 			DumpBrancherSubalgebras(Br1);
+			std::println("Second Sp(2) -> SO(3)");
 			const LABrancher Br2 = BrancherRenameA1B1C1(Br1,2,2);
 			DumpBrancherSubalgebras(Br2);
+			std::println("First SU(2) -> Sp(2)");
 			const LABrancher Br3 = BrancherRenameA1B1C1(Br2,1,3);
 			DumpBrancherSubalgebras(Br3);
+			
+			std::println("SO(4) {{2,3}} -> two of Sp(2)");
 			const LAINT MaxWts[2] = {2,3};
 			LACntdMaxWtList CWL;
 			CWL = Br0.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("First SO(3) -> SU(2)");
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("Second Sp(2) -> SO(3)");
 			CWL = Br2.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("First SU(2) -> Sp(2)");
 			CWL = Br3.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
@@ -757,11 +771,15 @@ int main(int argc, char **argv)
 			const LABrancher Br1 = BrancherRenameB2C2(Br0,2);
 			const LABrancher Br2 = BrancherRenameB2C2(Br1,2);
 			const LAINT MaxWts[4] = {1,0,0,0};
+			
+			std::println("SO(9) {{1,0,0,0}} -> SO(4) * SO(5)");
 			LACntdMaxWtList CWL;
 			CWL = Br0.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("SO(5) -> Sp(4)");
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("Sp(4) -> SO(5)");
 			CWL = Br2.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
@@ -774,11 +792,15 @@ int main(int argc, char **argv)
 			const LABrancher Br1 = BrancherRenameA3D3(Br0,1);
 			const LABrancher Br2 = BrancherRenameA3D3(Br1,1);
 			const LAINT MaxWts[4] = {1,0,0,0};
+			
+			std::println("SO(8) {{1,0,0,0}} -> SO(6) * U(1)");
 			LACntdMaxWtList CWL;
 			CWL = Br0.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("SO(6) -> SU(4)");
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("SU(4) -> SO(6)");
 			CWL = Br2.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
@@ -793,11 +815,21 @@ int main(int argc, char **argv)
 			const LABrancher Br3 = BrancherJoin2A1(Br2,1,3);
 			const LABrancher Br4 = BrancherJoin2A1(Br3,1,2);
 			const LAINT MaxWts[4] = {1,0,0,0};
+			
+			std::println("SO(8) {{1,0,0,0}} -> two of SO(4) / SO(3)*SO(3)");
 			LACntdMaxWtList CWL;
 			CWL = Br0.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("Split first SO(4)");
+			CWL = Br1.DoBranching(MaxWts);
+			DumpCWL(CWL);
+			std::println("Split second SO(4)");
 			CWL = Br2.DoBranching(MaxWts);
 			DumpCWL(CWL);
+			std::println("Join 1st, 3rd SO(3) - new SO(4) at end");
+			CWL = Br3.DoBranching(MaxWts);
+			DumpCWL(CWL);
+			std::println("Join 2nt, 4rd SO(3) - new SO(4) at end");
 			CWL = Br4.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
@@ -839,33 +871,40 @@ int main(int argc, char **argv)
 			LAINT_VECTOR newrts;
 			for (LAINT i=1; i<=4;i++) newrts.push_back(i);
 			
+			std::println("Original order");
 			LACntdMaxWtList CWL = Br0.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			
+			std::println("Root arrangement: 1, 2, 3, 4");
 			LABrancher Br1 = BrancherConjgD4(Br0,1, newrts);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			
+			std::println("Root arrangement: 1, 2, 4, 3");
 			newrts[0] = 1; newrts[2] = 4; newrts[3] = 3;
 			Br1 = BrancherConjgD4(Br0,1, newrts);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			
+			std::println("Root arrangement: 3, 2, 1, 4");
 			newrts[0] = 3; newrts[2] = 1; newrts[3] = 4;
 			Br1 = BrancherConjgD4(Br0,1, newrts);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			
+			std::println("Root arrangement: 3, 2, 4, 1");
 			newrts[0] = 3; newrts[2] = 4; newrts[3] = 1;
 			Br1 = BrancherConjgD4(Br0,1, newrts);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			
+			std::println("Root arrangement: 4, 2, 1, 3");
 			newrts[0] = 4; newrts[2] = 1; newrts[3] = 3;
 			Br1 = BrancherConjgD4(Br0,1, newrts);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			
+			std::println("Root arrangement: 4, 2, 3, 1");
 			newrts[0] = 4; newrts[2] = 3; newrts[3] = 1;
 			Br1 = BrancherConjgD4(Br0,1, newrts);
 			CWL = Br1.DoBranching(MaxWts);
@@ -883,44 +922,88 @@ int main(int argc, char **argv)
 			LAINT_VECTOR neword;
 			for (LAINT i=1; i<=3;i++) neword.push_back(i);
 			
+			std::println("Original order");
 			LACntdMaxWtList CWL = Br0.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
 			
+			std::println("Order: 1 2 3");
 			LABrancher Br1 = BrancherRearrange(Br0, neword);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
 			
+			std::println("Order: 1 3 2");
 			neword[0] = 1; neword[1] = 3; neword[2] = 2;
 			Br1 = BrancherRearrange(Br0, neword);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
 			
+			std::println("Order: 2 1 3");
 			neword[0] = 2; neword[1] = 1; neword[2] = 3;
 			Br1 = BrancherRearrange(Br0, neword);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
 			
+			std::println("Order: 2 3 1");
 			neword[0] = 2; neword[1] = 3; neword[2] = 1;
 			Br1 = BrancherRearrange(Br0, neword);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
 			
+			std::println("Order: 3 1 2");
 			neword[0] = 3; neword[1] = 1; neword[2] = 2;
 			Br1 = BrancherRearrange(Br0, neword);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
 			
+			std::println("Order: 3 2 1");
 			neword[0] = 3; neword[1] = 2; neword[2] = 1;
 			Br1 = BrancherRearrange(Br0, neword);
 			CWL = Br1.DoBranching(MaxWts);
 			DumpCWL(CWL);
 			println();
+		}
+		
+		{
+			std::println("SO(10) to Standard Model: U(1)'s with hypercharge, B-L");
+			LieAlgebraParams Params = {4,5};
+			LAINT_VECTOR RootNos = {3,5};
+			LABrancher Br = MakeMultiRootDemoter(Params, RootNos);
+			BRSUBMAT_MATRIX Mixer(4,2);
+			Mixer(0,0) = 1;
+			Mixer(0,1) = 0;
+			Mixer(1,0) = 0;
+			Mixer(1,1) = 1;
+			Mixer(2,0) = LAINT_FRACTION(1,6);
+			Mixer(2,1) = -1;
+			Mixer(3,0) = LAINT_FRACTION(-2,3);
+			Mixer(3,1) = 0;
+			LABrancher BrMx = BrancherRearrangeU1s(Br, Mixer);
+			
+			const LAINT_VECTOR MaxWts1 = {1,0,0,0,0};
+			DumpWeights(MaxWts1);
+			LACntdMaxWtList CWL1 = BrMx.DoBranching(MaxWts1);
+			DumpCWL(CWL1);
+			
+			const LAINT_VECTOR MaxWts2 = {0,0,0,1,0};
+			DumpWeights(MaxWts2);
+			LACntdMaxWtList CWL2 = BrMx.DoBranching(MaxWts2);
+			DumpCWL(CWL2);
+			
+			const LAINT_VECTOR MaxWts3 = {0,0,0,0,1};
+			DumpWeights(MaxWts3);
+			LACntdMaxWtList CWL3 = BrMx.DoBranching(MaxWts3);
+			DumpCWL(CWL3);
+			
+			const LAINT_VECTOR MaxWts4 = {0,1,0,0,0};
+			DumpWeights(MaxWts4);
+			LACntdMaxWtList CWL4 = BrMx.DoBranching(MaxWts4);
+			DumpCWL(CWL4);
 		}
 	}
 }
