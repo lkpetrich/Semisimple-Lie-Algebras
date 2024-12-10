@@ -25,8 +25,12 @@ using LAINT_VECTOR = std::vector<LAINT>;
 using LAINT_MATRIX = Matrix<LAINT>;
 using LAINT_MATRIX_ROW = MatrixRow<LAINT>;
 using LAINT_MATRIX_ROW_CONST = ConstMatrixRow<LAINT>;
+
 using LAINT_FRACTION = Fraction<LAINT>;
+using LAINT_FRACTION_VECTOR = std::vector<LAINT_FRACTION>;
 using LAINT_FRACTION_MATRIX = Matrix<LAINT_FRACTION>;
+using LAINT_FRACTION_MATRIX_ROW = MatrixRow<LAINT_FRACTION>;
+using LAINT_FRACTION_MATRIX_ROW_CONST = ConstMatrixRow<LAINT_FRACTION>;
 
 // Intermediate-result integer type, for avoiding overflows
 using LAXINT = int;
