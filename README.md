@@ -147,7 +147,7 @@ Finds automorphism Lie algebras for these algebras:
 
 # Small Lie Algebras
 
-Discusses Lie algebras with 1, 2, 3, and 4 generators. Most of these algebras are not semisimple, though the 3-generator ones include two simple ones: SO(3) and SO(2,1)
+Discusses Lie algebras with 1, 2, 3, 4, and 5 generators. Most of these algebras are not semisimple, though the 3-generator ones include two simple ones: SO(3) and SO(2,1)
 
 Notebook: Small Lie Algebras.nb
 
